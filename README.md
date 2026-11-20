@@ -13,7 +13,24 @@ Polski generator inspiracji dla Mistrza Gry i do gry solo. Osiem kategorii i 490
 - **Kopiuj zestaw** kopiuje opisy i wyniki do schowka.
 - Wszystkie kategorie zaczynają z pustymi polami. Wyniki pojawiają się dopiero po losowaniu lub ręcznym wybraniu dwóch tagów.
 
-Losowanie jest jednolite z `tags`, bez powtórzeń w parze. Źródłowy JSON dopuszcza ten sposób obok tabel rzutów. Numer na liście jest pozycją taga w kategorii, nie wynikiem rzutu procentowego. Cały element tablicy jest jedną propozycją, również gdy zawiera przecinki. Zachowano przypisania podkategorii ze źródła, w tym anomalię opisaną w `source_anomalies`.
+Losowanie jest jednolite z `tag_table`, bez powtórzeń w parze. Numer na liście jest numerem porządkowym taga w kategorii, nie wynikiem rzutu procentowego. Cały element tablicy `options` jest jedną propozycją, również gdy zawiera przecinki. Zachowano wszystkie treści i przypisania podkategorii z oryginału.
+
+## Dane — wersja 2
+
+Strona używa `data/WN_TAGS_PL_v2.json`. Oryginalny `data/WN_TAGS_PL.json` pozostaje archiwum do porównania; nie jest dołączany do publikacji strony.
+
+Nowy plik ma tylko `schema_version: 2` oraz tablicę `categories`. Każda kategoria zawiera:
+
+- `id_code` — stały identyfikator kategorii, np. `world`.
+- `name` — polską nazwę kategorii.
+- `tag_table` — tabelę tagów. Każdy wiersz ma `number` (1, 2, 3…), `id_code` oraz `name`.
+- `tags` — obiekty tagów pod kluczami zgodnymi z `id_code` w tabeli. Każdy tag zawiera `description` oraz osobne obiekty `Enemies`, `Friends`, `Complications`, `Things`, `Places`. Każdy z nich ma tablicę `options` z pełnymi tekstami propozycji.
+
+Nazwy i numery tagów są zapisane tylko w tabeli. Szczegóły pobierane są przez identyfikator, np. `categories[0].tags["world-abandoned-colony"].Enemies.options`. Numery porządkowe zaczynają się od 1 w każdej kategorii. Przy dodawaniu taga dopisz wiersz tabeli i odpowiadający mu obiekt pod tym samym `id_code`.
+
+Wersja 2 nie zawiera metadanych PDF, angielskich nazw źródłowych, instrukcji, sekcji dodatkowych, tabel rzutów ani powielonej liczby tagów. Polskie etykiety podkategorii są częścią interfejsu w `generator.js`.
+
+Skrypt `scripts/migrate-data-v2.mjs` odtwarza wersję 2 z archiwum wersji 1; bieżące poprawki treści należy wprowadzać bezpośrednio w pliku wersji 2. Testy migracji porównują z archiwum nazwy, identyfikatory, kolejność, opisy i wszystkie opcje; po celowych zmianach treści należy zaktualizować te oczekiwania.
 
 ## Praca lokalna
 
@@ -54,7 +71,9 @@ Dokumentacja: https://docs.github.com/en/pages/getting-started-with-github-pages
 
 ## Pliki
 
-- `data/WN_TAGS_PL.json` — pełna, niezmieniona kopia danych użytkownika; tutaj aktualizuj treści.
+- `data/WN_TAGS_PL_v2.json` — aktualne dane strony w uproszczonym formacie; tutaj aktualizuj treści.
+- `data/WN_TAGS_PL.json` — archiwalny oryginał w wersji 1.
+- `scripts/migrate-data-v2.mjs` — konwersja archiwum do wersji 2.
 - `generator.js` — losowanie i weryfikacja danych.
 - `app.js` — interfejs i obsługa kategorii.
 - `styles.css` — wygląd desktopowy i mobilny.

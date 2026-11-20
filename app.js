@@ -1,4 +1,4 @@
-import { FIELDS, pickPair, generateResult, validateData } from './generator.js';
+import { FIELD_LABELS, FIELDS, pickPair, generateResult, validateData } from './generator.js?v=2';
 
 const icons = {
   world: '<circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/>',
@@ -39,16 +39,16 @@ function notify(message) {
 function createCategory(category, labels) {
   let result;
   const section = el('section', 'category');
-  section.id = category.id;
-  section.setAttribute('aria-labelledby', `${category.id}-title`);
+  section.id = category.id_code;
+  section.setAttribute('aria-labelledby', `${category.id_code}-title`);
   const header = el('div', 'category-header');
   const emblem = el('span', 'category-icon');
-  emblem.innerHTML = icon(category.id);
+  emblem.innerHTML = icon(category.id_code);
   const titleGroup = el('div', 'category-title');
   const titleLine = el('div', 'title-line');
   const title = el('h2', '', category.name);
-  title.id = `${category.id}-title`;
-  titleLine.append(title, el('span', 'count', `${category.tags.length} tagów`));
+  title.id = `${category.id_code}-title`;
+  titleLine.append(title, el('span', 'count', `${category.tag_table.length} tagów`));
   titleGroup.append(titleLine);
   const rollButton = action('Losuj dwa tagi', 'dice', 'button primary');
   rollButton.setAttribute('aria-label', `Losuj dwa tagi — ${category.name}`);
@@ -59,10 +59,10 @@ function createCategory(category, labels) {
     const group = el('div', 'select-group');
     const label = el('label', `tag-label tag-${index + 1}`, `TAG ${index + 1}`);
     const select = el('select');
-    select.id = `${category.id}-tag-${index + 1}`;
+    select.id = `${category.id_code}-tag-${index + 1}`;
     label.htmlFor = select.id;
     select.append(new Option('Wybierz tag…', ''));
-    category.tags.forEach((tag, i) => select.append(new Option(`${i + 1}. ${tag.name}`, tag.id)));
+    category.tag_table.forEach(tag => select.append(new Option(`${tag.number}. ${tag.name}`, tag.id_code)));
     group.append(label, select);
     return { group, select };
   });
@@ -84,7 +84,7 @@ function createCategory(category, labels) {
       const card = el('details', `tag-card tag-${index + 1}`);
       card.open = window.matchMedia('(min-width: 701px)').matches;
       const summary = el('summary');
-      summary.append(el('span', 'tag-label', `TAG ${index + 1} · ${category.tags.indexOf(tag) + 1}`), el('span', 'tag-name', tag.name));
+      summary.append(el('span', 'tag-label', `TAG ${index + 1} · ${tag.number}`), el('span', 'tag-name', tag.name));
       card.append(summary, el('p', '', tag.description));
       descriptions.append(card);
     });
@@ -115,7 +115,7 @@ function createCategory(category, labels) {
         value.setAttribute('aria-hidden', 'true');
         const select = el('select', 'entry-select');
         select.setAttribute('aria-label', `${labels[field]} — Tag ${i + 1}: ${result.tags[i].name}`);
-        result.tags[i][field].forEach(item => select.append(new Option(item, item)));
+        result.tags[i][field].options.forEach(item => select.append(new Option(item, item)));
         select.value = entry;
         select.addEventListener('change', () => {
           result.entries[field][i] = select.value;
@@ -133,7 +133,7 @@ function createCategory(category, labels) {
     const reroll = action('Losuj inspiracje', 'refresh', 'button subtle');
     reroll.title = 'Zachowaj tagi i ponownie wylosuj ich propozycje';
     reroll.addEventListener('click', () => {
-      result = generateResult(category, result.tags.map(tag => tag.id));
+      result = generateResult(category, result.tags.map(tag => tag.id_code));
       render();
       status.textContent = 'Wylosowano nowe inspiracje dla wybranych tagów.';
     });
@@ -171,18 +171,18 @@ function createCategory(category, labels) {
 async function init() {
   const loading = document.querySelector('#loading');
   try {
-    const response = await fetch('./data/WN_TAGS_PL.json');
+    const response = await fetch('./data/WN_TAGS_PL_v2.json');
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = validateData(await response.json());
     const nav = document.querySelector('#category-nav');
     const container = document.querySelector('#categories');
     for (const category of data.categories) {
       const link = el('a', 'nav-link');
-      link.href = `#${category.id}`;
-      link.innerHTML = icon(category.id);
-      link.append(el('span', '', category.name.replace('Tagi ', '')), el('small', '', category.tags.length));
+      link.href = `#${category.id_code}`;
+      link.innerHTML = icon(category.id_code);
+      link.append(el('span', '', category.name.replace('Tagi ', '')), el('small', '', category.tag_table.length));
       nav.append(link);
-      container.append(createCategory(category, data.field_labels));
+      container.append(createCategory(category, FIELD_LABELS));
     }
     loading.remove();
     const links = [...nav.querySelectorAll('a')];
@@ -192,7 +192,7 @@ async function init() {
         else link.removeAttribute('aria-current');
       });
     }
-    activate(data.categories[0].id);
+    activate(data.categories[0].id_code);
     const observer = new IntersectionObserver(entries => {
       const visible = entries.filter(entry => entry.isIntersecting);
       if (visible.length) activate(visible[0].target.id);
