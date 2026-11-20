@@ -11,7 +11,7 @@ Polski generator inspiracji dla Mistrza Gry i do gry solo. Osiem kategorii i 490
 - Na telefonach opisy tagów są domyślnie zwinięte; dotknięcie nazwy rozwija pełny opis. Wszystkie kategorie są dostępne w przewijanym menu.
 - **Losuj inspiracje** zachowuje tagi i losuje ponownie tylko propozycje.
 - **Kopiuj zestaw** kopiuje opisy i wyniki do schowka.
-- Pierwsza kategoria pokazuje przykładową parę: 1. Opuszczona kolonia i 50. Minimalny kontakt.
+- Wszystkie kategorie zaczynają z pustymi polami. Wyniki pojawiają się dopiero po losowaniu lub ręcznym wybraniu dwóch tagów.
 
 Losowanie jest jednolite z `tags`, bez powtórzeń w parze. Źródłowy JSON dopuszcza ten sposób obok tabel rzutów. Numer na liście jest pozycją taga w kategorii, nie wynikiem rzutu procentowego. Cały element tablicy jest jedną propozycją, również gdy zawiera przecinki. Zachowano przypisania podkategorii ze źródła, w tym anomalię opisaną w `source_anomalies`.
 

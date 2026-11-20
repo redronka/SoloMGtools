@@ -165,7 +165,6 @@ function createCategory(category, labels) {
       status.textContent = 'Wybierz dwa tagi, aby wygenerować zestaw.';
     }
   }));
-  if (category.id === 'world') usePair(['world-abandoned-colony', 'world-minimal-contact']);
   return section;
 }
 
