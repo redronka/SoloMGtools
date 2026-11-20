@@ -28,7 +28,17 @@ npm test
 npm run build
 ```
 
-Wynik budowania trafia do `dist/`. Strona to HTML, CSS i JavaScript, bez backendu. Kroje DM Sans i Manrope pobierane są z Google Fonts; przy braku sieci działają systemowe zamienniki.
+Wynik budowania trafia do `dist/`. Strona to HTML, CSS i JavaScript, bez backendu. Używa wyłącznie fontów systemowych i zasobów z własnego adresu.
+
+## Prywatność i widoczność
+
+Strona nie zawiera analityki, pikseli śledzących, zewnętrznych skryptów ani Google Fonts. Nie zapisuje identyfikatorów w cookies ani pamięci przeglądarki. Losowanie odbywa się w przeglądarce. Schowek jest zapisywany wyłącznie po naciśnięciu „Kopiuj zestaw”.
+
+Usunięto opis SEO i metadane promocyjne. Zostawiono kodowanie UTF-8 i ustawienie widoku mobilnego. Dyrektywy `noindex, nofollow, nosnippet, noimageindex` proszą zgodne wyszukiwarki o pominięcie strony. Polityka `no-referrer` wyłącza nagłówek odsyłający, a Content Security Policy ogranicza pobieranie zasobów i połączenia do własnego hosta. Nie ma mapy witryny ani zgłoszenia do wyszukiwarek.
+
+To nadal publiczna strona: dyrektywy wyszukiwarek nie ograniczają dostępu i nie wiążą wszystkich botów. Publiczne repozytorium, jego historia i JSON mogą być odnalezione niezależnie od strony. Hosting GitHub Pages obsługuje żądania niezależnie od kodu aplikacji.
+
+Dokumentacja dyrektyw: https://developers.google.com/search/docs/crawling-indexing/robots-meta-tag
 
 ## GitHub Pages
 
