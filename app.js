@@ -13,16 +13,6 @@ const icons = {
   refresh: '<path d="M20 7v5h-5M4 17v-5h5M5 7a8 8 0 0 1 13-2l2 3M4 16l2 3a8 8 0 0 0 13-2"/>',
   copy: '<rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V3H3v13h5"/>',
 };
-const subtitles = {
-  world: 'Odległe planety, nowe światy i ich tajemnice.',
-  mission: 'Zlecenia, intrygi i sprawy, które nie mogą czekać.',
-  enclave: 'Osady, schronienia i ci, którzy nazywają je domem.',
-  'encounter-site': 'Miejsca, w których przygoda nabiera rozpędu.',
-  community: 'Ludzie, wspólne sprawy i skrywane konflikty.',
-  court: 'Władza, dworskie ambicje i niebezpieczne sojusze.',
-  ruin: 'Pozostałości dawnych czasów i pogrzebane sekrety.',
-  wilderness: 'Nieznane szlaki i to, co czeka poza cywilizacją.',
-};
 function icon(name) { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name] || icons.dice}</svg>`; }
 function el(tag, className, text) {
   const element = document.createElement(tag);
@@ -56,10 +46,10 @@ function createCategory(category, labels) {
   emblem.innerHTML = icon(category.id);
   const titleGroup = el('div', 'category-title');
   const titleLine = el('div', 'title-line');
-  const title = el('h3', '', category.name);
+  const title = el('h2', '', category.name);
   title.id = `${category.id}-title`;
   titleLine.append(title, el('span', 'count', `${category.tags.length} tagów`));
-  titleGroup.append(titleLine, el('p', '', subtitles[category.id]));
+  titleGroup.append(titleLine);
   const rollButton = action('Losuj dwa tagi', 'dice', 'button primary');
   rollButton.setAttribute('aria-label', `Losuj dwa tagi — ${category.name}`);
   header.append(emblem, titleGroup, rollButton);
@@ -80,10 +70,6 @@ function createCategory(category, labels) {
   const output = el('div', 'output');
   const status = el('p', 'sr-only');
   status.setAttribute('role', 'status');
-  const empty = el('div', 'empty');
-  empty.innerHTML = '<span aria-hidden="true">✧</span>';
-  empty.append(el('p', '', 'Każda historia zaczyna się od pomysłu.'), el('small', '', 'Wylosuj parę lub wybierz dwa tagi powyżej.'));
-  output.append(empty);
   section.append(header, controls, status, output);
 
   function syncOptions() {
@@ -91,12 +77,15 @@ function createCategory(category, labels) {
       for (const option of select.options) option.disabled = Boolean(option.value && option.value === selects[1 - i].select.value);
     });
   }
-  function render(isExample = false) {
+  function render() {
     output.replaceChildren();
     const descriptions = el('div', 'descriptions');
     result.tags.forEach((tag, index) => {
-      const card = el('article', `tag-card tag-${index + 1}`);
-      card.append(el('span', 'tag-label', `TAG ${index + 1} · ${category.tags.indexOf(tag) + 1}`), el('h4', '', tag.name), el('p', '', tag.description));
+      const card = el('details', `tag-card tag-${index + 1}`);
+      card.open = window.matchMedia('(min-width: 701px)').matches;
+      const summary = el('summary');
+      summary.append(el('span', 'tag-label', `TAG ${index + 1} · ${category.tags.indexOf(tag) + 1}`), el('span', 'tag-name', tag.name));
+      card.append(summary, el('p', '', tag.description));
       descriptions.append(card);
     });
     const table = el('div', 'result-table');
@@ -118,15 +107,28 @@ function createCategory(category, labels) {
       name.append(el('small', '', field));
       row.append(name);
       result.entries[field].forEach((entry, i) => {
-        const cell = el('div', `entry entry-${i + 1}`, entry);
+        const cell = el('div', `entry entry-${i + 1}`);
         cell.setAttribute('role', 'cell');
         cell.dataset.tag = `Tag ${i + 1}`;
+        const picker = el('div', 'entry-picker');
+        const value = el('span', 'entry-value', entry);
+        value.setAttribute('aria-hidden', 'true');
+        const select = el('select', 'entry-select');
+        select.setAttribute('aria-label', `${labels[field]} — Tag ${i + 1}: ${result.tags[i].name}`);
+        result.tags[i][field].forEach(item => select.append(new Option(item, item)));
+        select.value = entry;
+        select.addEventListener('change', () => {
+          result.entries[field][i] = select.value;
+          value.textContent = select.value;
+          status.textContent = `${labels[field]}, tag ${i + 1}: ${select.value}`;
+        });
+        picker.append(value, select);
+        cell.append(picker);
         row.append(cell);
       });
       table.append(row);
     }
     const toolbar = el('div', 'result-toolbar');
-    const hint = el('span', 'result-hint', isExample ? 'Przykładowa para · gotowa do odkrycia' : 'Dwa tagi. Pięć punktów zaczepienia.');
     const actions = el('div', 'result-actions');
     const reroll = action('Losuj inspiracje', 'refresh', 'button subtle');
     reroll.title = 'Zachowaj tagi i ponownie wylosuj ich propozycje';
@@ -138,18 +140,18 @@ function createCategory(category, labels) {
     const copy = action('Kopiuj zestaw', 'copy', 'button subtle');
     copy.addEventListener('click', async () => {
       const text = [category.name, '', ...result.tags.map((tag, i) => `TAG ${i + 1}: ${tag.name}\n${tag.description}`), '', ...FIELDS.map(field => `${labels[field]}:\n1. ${result.entries[field][0]}\n2. ${result.entries[field][1]}`)].join('\n\n');
-      try { await navigator.clipboard.writeText(text); notify('Zestaw skopiowany. Czas na historię!'); }
+      try { await navigator.clipboard.writeText(text); notify('Zestaw skopiowany.'); }
       catch { notify('Schowek jest niedostępny. Zaznacz i skopiuj tekst zestawu.'); }
     });
     actions.append(reroll, copy);
-    toolbar.append(hint, actions);
+    toolbar.append(actions);
     output.append(descriptions, table, toolbar);
   }
-  function usePair(ids, isExample = false) {
+  function usePair(ids) {
     selects.forEach(({ select }, i) => { select.value = ids[i]; });
     syncOptions();
     result = generateResult(category, ids);
-    render(isExample);
+    render();
     status.textContent = `Wybrane tagi: ${result.tags.map(tag => tag.name).join(' i ')}. Wylosowano po dwie propozycje dla każdej podkategorii.`;
   }
   rollButton.addEventListener('click', () => usePair(pickPair(category)));
@@ -159,11 +161,11 @@ function createCategory(category, labels) {
     if (ids.every(Boolean)) usePair(ids);
     else {
       result = undefined;
-      output.replaceChildren(empty);
+      output.replaceChildren();
       status.textContent = 'Wybierz dwa tagi, aby wygenerować zestaw.';
     }
   }));
-  if (category.id === 'world') usePair(['world-abandoned-colony', 'world-minimal-contact'], true);
+  if (category.id === 'world') usePair(['world-abandoned-colony', 'world-minimal-contact']);
   return section;
 }
 

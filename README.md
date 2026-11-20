@@ -7,6 +7,8 @@ Polski generator inspiracji dla Mistrza Gry i do gry solo. Osiem kategorii i 490
 - **Losuj dwa tagi** wybiera dwa różne tagi w danej kategorii.
 - Można również wybrać po jednym tagu z dwóch list. Wybranie drugiego automatycznie tworzy zestaw.
 - Strona pokazuje pełne opisy obu tagów i po jednej propozycji z każdego taga dla Wrogów, Przyjaciół, Komplikacji, Rzeczy i Miejsc.
+- Każda propozycja jest listą wyboru: można zamienić ją na dowolny inny wpis z tej samej podkategorii tego samego taga. Zmiana jednego pola nie zmienia pozostałych wyników. Kopiowanie uwzględnia ręczne zmiany.
+- Na telefonach opisy tagów są domyślnie zwinięte; dotknięcie nazwy rozwija pełny opis. Wszystkie kategorie są dostępne w przewijanym menu.
 - **Losuj inspiracje** zachowuje tagi i losuje ponownie tylko propozycje.
 - **Kopiuj zestaw** kopiuje opisy i wyniki do schowka.
 - Pierwsza kategoria pokazuje przykładową parę: 1. Opuszczona kolonia i 50. Minimalny kontakt.
