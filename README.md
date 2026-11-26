@@ -1,6 +1,21 @@
 # SoloMGtools
 
-Polski warsztat generatorów dla Mistrza Gry i do gry solo. Menu **Generatory** pozwala przełączać się między **Tagami** (osiem kategorii i 490 tagów WN-TAGS) oraz **Nazwami planet** (31 typów i 1470 autorskich nazw inspirowanych Travellerem). Wyniki obu narzędzi pozostają zachowane podczas przełączania, do odświeżenia strony.
+Polski warsztat narzędzi dla Mistrza Gry i do gry solo. Menu **Generatory** pozwala przełączać się między **Tagami** (osiem kategorii i 490 tagów WN-TAGS), **Nazwami planet** (31 typów i 1470 autorskich nazw inspirowanych Travellerem) oraz **Dekoderem UWP**. Wyniki narzędzi pozostają zachowane podczas przełączania, do odświeżenia strony.
+
+## Dekoder UWP
+
+- Otwórz **Dekoder UWP** lub adres `#uwp`. Wpisz UWP, np. `A593943-A`, i opcjonalne Ix `{ 4 }`, Ex `(D8E+1)` oraz Cx `[6D27]`. Rozszerzenia można odczytać także osobno, bez UWP; nawiasy w ręcznych polach są opcjonalne.
+- Rozwiń **Wklej dane z Traveller Map**, wklej dane jednego świata i wybierz **Wczytaj i dekoduj**. Obsługiwane są wiersze z etykietami UWP/Importance/Economics/Culture, sam kod oraz standardowy wiersz sektora. Import zastępuje wszystkie pola, więc brakujące rozszerzenie nie zostanie po poprzednim świecie.
+- Wynik zawiera osiem cech UWP, znaczenie regionalne, cztery cechy ekonomii i cztery cechy kultury. eHex jest przeliczany na wartości dziesiętne z pominięciem I oraz O. Formularz **Odczytaj świat z kodu** jest początkowo otwarty i sam zwija się po udanym dekodowaniu; kliknięcie tytułu pozwala ponownie zmienić dane. Przy błędach pozostaje otwarty.
+- Obsługiwane są porty gwiezdne A–E/X i lokalne F/G/H/Y, znaki niewiadomej `?` w UWP, ustroje obcych z podstawowej tabeli Second Survey, specjalne prawo S oraz TL do L (20). Dekoder nie obsługuje alternatywnej tabeli ustrojów Wi z The New Era.
+- Porty pokazują usługi i cenę dostępnego paliwa (500 Cr/t rafinowanego lub 100 Cr/t nierafinowanego). TL zawiera przykłady wyposażenia, np. holograficzne drony od TL B (11), a także odpowiednie przykłady z niższych poziomów.
+- Karty ekonomii, kultury i TL pokazują nazwę oraz kod po prawej. Definicja skali i wyjaśnienie niskich/wysokich wyników są domyślnie zwinięte. Główna treść interpretuje konkretny poziom: osobno jego wpływ na świat i skutki dla przybyszów. Każda wartość ma własny, statyczny opis w `uwp-levels.js`. Są to autorskie interpretacje MG; źródło definiuje głównie skrajne wartości skal Ex/Cx. TL nie gwarantuje lokalnej dostępności każdego urządzenia.
+- **Niżej** i **Wyżej** pozwalają przeglądać sąsiednie poziomy na danej karcie, a **Reset** wraca do wartości z odczytanego profilu. Granice skali blokują dalsze przejście. Podgląd nie zmienia pól, kodów rozszerzeń, pozostałych kart ani kopiowanego profilu; jest oznaczony wraz z wartością źródłową. Definicja pozostaje rozwinięta lub zwinięta podczas przeglądania.
+- Poziom prawa pokazuje kumulatywną listę ograniczeń z poprzednich poziomów, z bieżącym poziomem pogrubionym. Dla poziomu 0 pokazujemy brak zakazów; dla S i ? nie tworzymy pozornej listy dziedziczonych ograniczeń.
+- **Kopiuj opis** zapisuje kompletny odczyt wraz z uwagami i źródłami. **Wczytaj przykład** wypełnia i dekoduje przykład; **Wyczyść** usuwa wszystkie dane. Po ręcznej zmianie pola wynik wymaga ponownego dekodowania.
+- Walidacja wskazuje błędy pól, niewłaściwe zakresy i niejednoznaczny import kilku światów. Kod `A3234112-A` jest błędny: ma osiem znaków przed myślnikiem zamiast siedmiu. Nie usuwamy nadmiarowej cyfry automatycznie. Ostrzeżenia wskazują m.in. sprzeczność populacji UWP z zerowym Cx.
+
+Podstawa kodów: [Traveller Map — Second Survey](https://travellermap.com/doc/secondsurvey). Uzupełnienia: [Mongoose Traveller SRD — paliwo](https://www.traveller-srd.com/core-rules/spacecraft-operations/) i [wyposażenie](https://www.traveller-srd.com/core-rules/equipment/). Dane są odczytywane lokalnie w przeglądarce; dekoder nie wysyła zapytań do Traveller Map.
 
 ## Nazwy planet
 
@@ -19,7 +34,7 @@ Biblioteka jest w `data/PLANET_NAMES_PL.json`: `schema_version: 1`, `source` i t
 
 W `app.js` rejestr `generators` opisuje pozycje menu, tytuły i funkcje inicjalizujące. Aby dodać narzędzie, dodaj panel w `index.html`, moduł z funkcją `init(container)`, pozycję rejestru i jego pliki do `scripts/build.mjs`. Inicjalizacja następuje dopiero po pierwszym otwarciu generatora. Błąd pobierania jednej biblioteki nie blokuje drugiej. Wspólne elementy interfejsu są w `ui.js`.
 
-Bezpośrednie adresy to `#tags` oraz `#planets`; działają też dotychczasowe odsyłacze do kategorii tagów, np. `#world`. Przełączanie działa również z przyciskami Wstecz/Dalej przeglądarki.
+Bezpośrednie adresy to `#tags`, `#planets` oraz `#uwp`; działają też dotychczasowe odsyłacze do kategorii tagów, np. `#world`. Przełączanie działa również z przyciskami Wstecz/Dalej przeglądarki.
 
 ## Działanie
 
@@ -70,7 +85,7 @@ Wynik budowania trafia do `dist/`. Strona to HTML, CSS i JavaScript, bez backend
 
 ## Prywatność i widoczność
 
-Strona nie zawiera analityki, pikseli śledzących, zewnętrznych skryptów ani Google Fonts. Nie zapisuje identyfikatorów w cookies ani pamięci przeglądarki. Losowanie odbywa się w przeglądarce. Schowek jest zapisywany wyłącznie po naciśnięciu „Kopiuj zestaw” lub „Kopiuj” przy nazwie planety.
+Strona nie zawiera analityki, pikseli śledzących, zewnętrznych skryptów ani Google Fonts. Nie zapisuje identyfikatorów w cookies ani pamięci przeglądarki. Losowanie i dekodowanie odbywa się w przeglądarce. Schowek jest zapisywany wyłącznie po naciśnięciu „Kopiuj zestaw”, „Kopiuj” przy nazwie planety lub „Kopiuj opis” w dekoderze.
 
 Usunięto opis SEO i metadane promocyjne. Zostawiono kodowanie UTF-8 i ustawienie widoku mobilnego. Dyrektywy `noindex, nofollow, nosnippet, noimageindex` proszą zgodne wyszukiwarki o pominięcie strony. Polityka `no-referrer` wyłącza nagłówek odsyłający, a Content Security Policy ogranicza pobieranie zasobów i połączenia do własnego hosta. Nie ma mapy witryny ani zgłoszenia do wyszukiwarek.
 
@@ -99,8 +114,13 @@ Dokumentacja: https://docs.github.com/en/pages/getting-started-with-github-pages
 - `ui.js` — wspólne przyciski, ikony i komunikaty.
 - `planets.js` — losowanie, formatowanie i weryfikacja nazw planet.
 - `planet-ui.js` — interfejs generatora nazw planet.
+- `uwp.js` — parser UWP/Ix/Ex/Cx, import z mapy, walidacja i format kopiowania.
+- `uwp-data.js` — polskie opisy kodów oraz przykłady technologii.
+- `uwp-levels.js` — statyczne interpretacje każdego poziomu ekonomii, kultury i TL.
+- `uwp-ui.js` — formularz, import, wyniki i kopiowanie dekodera.
 - `styles.css` — wygląd desktopowy i mobilny.
 - `tests/generator.test.js` — testy danych, par tagów i wyników.
 - `tests/planets.test.js` — kompletność nazw planet, losowanie i format kopiowania.
+- `tests/uwp.test.js` — poprawne i błędne kody, zakresy, import, porty, technologia oraz zerowe profile.
 
 Dane WN-TAGS dostarczył właściciel projektu. Nie dodano deklaracji licencji do treści źródłowych. Nazwy planet są autorskimi propozycjami przygotowanymi dla tego projektu.

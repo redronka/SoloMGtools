@@ -1,6 +1,7 @@
 import { FIELD_LABELS, FIELDS, pickPair, generateResult, validateData } from './generator.js?v=2';
 import { icon, el, action, notify } from './ui.js?v=3';
 import { initPlanets } from './planet-ui.js?v=4';
+import { initUwp } from './uwp-ui.js?v=2';
 
 function createCategory(category, labels) {
   let result;
@@ -169,6 +170,7 @@ async function initTags(container) {
 const generators = [
   { id: 'tags', label: 'Tagi', title: 'Generator tagów', edition: 'WN-TAGS · PL', icon: 'dice', init: initTags },
   { id: 'planets', label: 'Nazwy planet', title: 'Generator nazw planet', edition: 'TRAVELLER', icon: 'world', init: initPlanets },
+  { id: 'uwp', label: 'Dekoder UWP', title: 'Dekoder UWP', edition: 'TRAVELLER · PL', icon: 'world', init: initUwp },
 ];
 const generatorNav = document.querySelector('#generator-nav');
 let activeGenerator;
@@ -203,8 +205,8 @@ function selectGenerator() {
   document.querySelector('#tag-navigation').hidden = generator.id !== 'tags';
   document.querySelector('#generator-title').textContent = generator.title;
   document.querySelector('#generator-edition').textContent = generator.edition;
-  document.querySelector('#generator-credit').textContent = generator.id === 'tags' ? 'Dane: WN-TAGS · PL' : 'Autorskie nazwy · Traveller';
-  document.querySelector('#generator-credit').hidden = generator.id === 'planets';
+  document.querySelector('#generator-credit').textContent = 'Dane: WN-TAGS · PL';
+  document.querySelector('#generator-credit').hidden = generator.id !== 'tags';
   if (changed) window.scrollTo({ top: 0, behavior: 'instant' });
   generator.ready ??= loadGenerator(generator);
 }

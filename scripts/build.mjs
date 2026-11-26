@@ -9,7 +9,7 @@ validatePlanetData(JSON.parse(await readFile(new URL('data/PLANET_NAMES_PL.json'
 await rm(out, { recursive: true, force: true });
 await mkdir(out, { recursive: true });
 await mkdir(new URL('data/', out));
-for (const file of ['index.html', 'styles.css', 'app.js', 'generator.js', 'ui.js', 'planets.js', 'planet-ui.js', 'favicon.svg', 'data/WN_TAGS_PL_v2.json', 'data/PLANET_NAMES_PL.json']) {
+for (const file of ['index.html', 'styles.css', 'app.js', 'generator.js', 'ui.js', 'planets.js', 'planet-ui.js', 'uwp.js', 'uwp-data.js', 'uwp-levels.js', 'uwp-ui.js', 'favicon.svg', 'data/WN_TAGS_PL_v2.json', 'data/PLANET_NAMES_PL.json']) {
   await cp(new URL(file, root), new URL(file, out), { recursive: true });
 }
 console.log(`Gotowa strona: ${fileURLToPath(out)}`);
