@@ -1,6 +1,20 @@
 # SoloMGtools
 
-Polski warsztat narzędzi dla Mistrza Gry i do gry solo. Menu **Generatory** pozwala przełączać się między **Tagami** (osiem kategorii i 490 tagów WN-TAGS), **Nazwami planet** (31 typów i 1470 autorskich nazw inspirowanych Travellerem) oraz **Dekoderem UWP**. Wyniki narzędzi pozostają zachowane podczas przełączania, do odświeżenia strony.
+Polski warsztat narzędzi dla Mistrza Gry i do gry solo. Menu **Generatory** pozwala przełączać się między **Tagami** (osiem kategorii i 490 tagów WN-TAGS), **Nazwami planet** (31 typów i 1470 autorskich nazw inspirowanych Travellerem), **Dekoderem UWP** oraz **Generators** (50 generatorów WN-Generators w 13 grupach). Wyniki narzędzi pozostają zachowane podczas przełączania, do odświeżenia strony.
+
+## Generators
+
+- Otwórz **Generators** lub `#wn-generators`, wybierz grupę i kliknij nazwę generatora. Pierwsze losowanie następuje dopiero po kliknięciu.
+- Nagłówek **Kategorie** zwija i rozwija listę kategorii, zachowując widoczne wyniki. W zwiniętym nagłówku widać nazwę wybranej kategorii. **Misje** łączą wszystkie 11 generatorów z dwóch źródłowych grup misji.
+- **Postacie** łączą BN jednym rzutem, patronów i pośrednika z dotychczasowych grup „Postacie jednym rzutem” i „Postacie”.
+- BN jednym rzutem, megakorporacja, gang i szczegółowe typy misji losują wszystkie składniki zestawu jednocześnie. Imiona, nazwiska i nazwy miejsc mają osobne przyciski.
+- Każdy wynik otwiera listę wszystkich pozycji z właściwej tabeli. Zmiana pola zachowuje niezależne wyniki; zmiana typu misji lub kategorii miejsca przebudowuje powiązaną gałąź.
+- **Kopiuj zestaw** uwzględnia bieżące wybory i pełne opisy wyników. Opisy oraz instrukcje z danych są domyślnie zwinięte na wszystkich szerokościach ekranu. Interfejs nie dodaje wstępów, komentarzy, numerów rzutów ani metadanych PDF.
+- **Misja — pełna procedura** losuje dwa różne tagi z istniejącej biblioteki WN-TAGS wraz z inspiracjami, rodzaj misji i wszystkie tabele wybranego rodzaju. Pośrednika można dołączyć polem wyboru. Wynik „rzuć dwa razy” rozwija oba typy misji.
+- Rzuty respektują źródłowe zakresy i wagi, z osobnymi k6/k6 w problemach społeczności. Wykonywane są dodatkowe rzuty, warunki, wybór kampanii i wskazane w danych powtórzenia. Przy tworzeniu miasta można wybrać liczbę korporacji i dzielnic, a przy zagrożeniach — osobny typ dla każdego zagrożenia.
+- Biblioteka `data/WN_GENERATORS_PL.json` jest kopią danych dostarczonych w `WN_GENERATORS_DATA_PL`: 253 tabele, 3761 wierszy i 142 pełne opisy. Nazwy, treści i identyfikatory zachowano. Definicje znajdują się w `data/WN_GENERATORS_PL.schema.json`. Po zmianie danych uruchom testy i budowanie.
+
+Logika i format kopiowania są w `generators.js`, interfejs w `generators-ui.js`, a testy zakresów, zależności i edycji w `tests/generators.test.js`.
 
 ## Dekoder UWP
 
@@ -35,7 +49,7 @@ Biblioteka jest w `data/PLANET_NAMES_PL.json`: `schema_version: 1`, `source` i t
 
 W `app.js` rejestr `generators` opisuje pozycje menu, tytuły i funkcje inicjalizujące. Aby dodać narzędzie, dodaj panel w `index.html`, moduł z funkcją `init(container)`, pozycję rejestru i jego pliki do `scripts/build.mjs`. Inicjalizacja następuje dopiero po pierwszym otwarciu generatora. Błąd pobierania jednej biblioteki nie blokuje drugiej. Wspólne elementy interfejsu są w `ui.js`.
 
-Bezpośrednie adresy to `#tags`, `#planets` oraz `#uwp`; działają też dotychczasowe odsyłacze do kategorii tagów, np. `#world`. Przełączanie działa również z przyciskami Wstecz/Dalej przeglądarki.
+Bezpośrednie adresy to `#tags`, `#planets`, `#uwp` oraz `#wn-generators`; działają też dotychczasowe odsyłacze do kategorii tagów, np. `#world`. Przełączanie działa również z przyciskami Wstecz/Dalej przeglądarki.
 
 ## Działanie
 

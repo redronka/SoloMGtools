@@ -2,6 +2,7 @@ import { FIELD_LABELS, FIELDS, pickPair, generateResult, validateData } from './
 import { icon, el, action, notify } from './ui.js?v=3';
 import { initPlanets } from './planet-ui.js?v=4';
 import { initUwp } from './uwp-ui.js?v=3';
+import { initGenerators } from './generators-ui.js?v=4';
 
 function createCategory(category, labels) {
   let result;
@@ -171,6 +172,7 @@ const generators = [
   { id: 'tags', label: 'Tagi', title: 'Generator tagów', edition: 'WN-TAGS · PL', icon: 'dice', init: initTags },
   { id: 'planets', label: 'Nazwy planet', title: 'Generator nazw planet', edition: 'TRAVELLER', icon: 'world', init: initPlanets },
   { id: 'uwp', label: 'Dekoder UWP', title: 'Dekoder UWP', edition: 'TRAVELLER · PL', icon: 'world', init: initUwp },
+  { id: 'wn-generators', label: 'Generators', title: 'Generators', edition: '', icon: 'dice', init: initGenerators },
 ];
 const generatorNav = document.querySelector('#generator-nav');
 let activeGenerator;
