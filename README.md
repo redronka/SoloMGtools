@@ -1,6 +1,25 @@
 # SoloMGtools
 
-Polski generator inspiracji dla Mistrza Gry i do gry solo. Osiem kategorii i 490 tagów z pliku WN-TAGS. Wszystkie kategorie są dostępne na jednej stronie, jedna pod drugą.
+Polski warsztat generatorów dla Mistrza Gry i do gry solo. Menu **Generatory** pozwala przełączać się między **Tagami** (osiem kategorii i 490 tagów WN-TAGS) oraz **Nazwami planet** (31 typów i 1470 autorskich nazw inspirowanych Travellerem). Wyniki obu narzędzi pozostają zachowane podczas przełączania, do odświeżenia strony.
+
+## Nazwy planet
+
+- Każdy z 31 typów ma własny przycisk losowania, wynik oraz przycisk **Kopiuj** obok niego. Pierwsze losowanie następuje po kliknięciu typu.
+- Wynik i schowek mają ten sam format, np. `Szronowa Przystań (Ice World)`.
+- Kolejne kliknięcie typu losuje inną nazwę niż poprzednia. Pozostałe typy zachowują swoje wyniki.
+- Asteroid Belt World, Big World, Desert World, Ice World i Rad World mają po **60 nazw**, pozostałe typy po **45 nazw**.
+- Zachowano wszystkie wcześniejsze 540 nazw i dodano po 30 nazw do każdego typu: łącznie 930 nowych pozycji, w tym 744 nazwy jednowyrazowe, np. `Kaller`, oraz nazwy własne, np. `Pas Kallera`.
+- Generator zaczyna się od przycisków typów, bez wstępu ani odsyłaczy do zewnętrznych stron.
+- Nazwy mieszają język polski i angielski, kody katalogowe, nazwy poważne i przydomki osadników. Są autorskimi propozycjami do sesji, a nie katalogiem kanonicznych światów.
+- Typy i ich kolejność odpowiadają liście „Physical Planetology” na [Traveller Wiki](https://wiki.travellerrpg.com/Planet). Zachowano także osobne pozycje o podobnym znaczeniu, np. Ocean World i Panthallasic World.
+
+Biblioteka jest w `data/PLANET_NAMES_PL.json`: `schema_version: 1`, `source` i tablica `types`. Typ ma stałe `id`, oryginalne `name`, polskie `label` i tablicę `names`. Nowe nazwy dopisuj do tej tablicy; walidator wykrywa puste wpisy i duplikaty w całej bibliotece. Po celowym zwiększeniu liczby nazw zaktualizuj oczekiwane liczby w `tests/planets.test.js`.
+
+## Dodawanie generatorów
+
+W `app.js` rejestr `generators` opisuje pozycje menu, tytuły i funkcje inicjalizujące. Aby dodać narzędzie, dodaj panel w `index.html`, moduł z funkcją `init(container)`, pozycję rejestru i jego pliki do `scripts/build.mjs`. Inicjalizacja następuje dopiero po pierwszym otwarciu generatora. Błąd pobierania jednej biblioteki nie blokuje drugiej. Wspólne elementy interfejsu są w `ui.js`.
+
+Bezpośrednie adresy to `#tags` oraz `#planets`; działają też dotychczasowe odsyłacze do kategorii tagów, np. `#world`. Przełączanie działa również z przyciskami Wstecz/Dalej przeglądarki.
 
 ## Działanie
 
@@ -51,7 +70,7 @@ Wynik budowania trafia do `dist/`. Strona to HTML, CSS i JavaScript, bez backend
 
 ## Prywatność i widoczność
 
-Strona nie zawiera analityki, pikseli śledzących, zewnętrznych skryptów ani Google Fonts. Nie zapisuje identyfikatorów w cookies ani pamięci przeglądarki. Losowanie odbywa się w przeglądarce. Schowek jest zapisywany wyłącznie po naciśnięciu „Kopiuj zestaw”.
+Strona nie zawiera analityki, pikseli śledzących, zewnętrznych skryptów ani Google Fonts. Nie zapisuje identyfikatorów w cookies ani pamięci przeglądarki. Losowanie odbywa się w przeglądarce. Schowek jest zapisywany wyłącznie po naciśnięciu „Kopiuj zestaw” lub „Kopiuj” przy nazwie planety.
 
 Usunięto opis SEO i metadane promocyjne. Zostawiono kodowanie UTF-8 i ustawienie widoku mobilnego. Dyrektywy `noindex, nofollow, nosnippet, noimageindex` proszą zgodne wyszukiwarki o pominięcie strony. Polityka `no-referrer` wyłącza nagłówek odsyłający, a Content Security Policy ogranicza pobieranie zasobów i połączenia do własnego hosta. Nie ma mapy witryny ani zgłoszenia do wyszukiwarek.
 
@@ -73,10 +92,15 @@ Dokumentacja: https://docs.github.com/en/pages/getting-started-with-github-pages
 
 - `data/WN_TAGS_PL_v2.json` — aktualne dane strony w uproszczonym formacie; tutaj aktualizuj treści.
 - `data/WN_TAGS_PL.json` — archiwalny oryginał w wersji 1.
+- `data/PLANET_NAMES_PL.json` — 31 typów planet i 1470 autorskich nazw.
 - `scripts/migrate-data-v2.mjs` — konwersja archiwum do wersji 2.
 - `generator.js` — losowanie i weryfikacja danych.
-- `app.js` — interfejs i obsługa kategorii.
+- `app.js` — wybór generatora i obsługa kategorii tagów.
+- `ui.js` — wspólne przyciski, ikony i komunikaty.
+- `planets.js` — losowanie, formatowanie i weryfikacja nazw planet.
+- `planet-ui.js` — interfejs generatora nazw planet.
 - `styles.css` — wygląd desktopowy i mobilny.
 - `tests/generator.test.js` — testy danych, par tagów i wyników.
+- `tests/planets.test.js` — kompletność nazw planet, losowanie i format kopiowania.
 
-Dane dostarczył właściciel projektu. Nie dodano deklaracji licencji do treści źródłowych.
+Dane WN-TAGS dostarczył właściciel projektu. Nie dodano deklaracji licencji do treści źródłowych. Nazwy planet są autorskimi propozycjami przygotowanymi dla tego projektu.

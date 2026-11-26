@@ -1,40 +1,6 @@
 import { FIELD_LABELS, FIELDS, pickPair, generateResult, validateData } from './generator.js?v=2';
-
-const icons = {
-  world: '<circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/>',
-  mission: '<path d="m14 3 7 7-11 11H3v-7L14 3Z"/><path d="m13 4 7 7M6 15l3 3"/>',
-  enclave: '<path d="m3 10 9-7 9 7v11H3V10Z"/><path d="M9 21v-8h6v8"/>',
-  'encounter-site': '<path d="m3 4 6 2 6-2 6 2v15l-6-2-6 2-6-2V4ZM9 6v15M15 4v15"/>',
-  community: '<circle cx="9" cy="7" r="3"/><path d="M3 21v-4a6 6 0 0 1 12 0v4M17 4a3 3 0 0 1 0 6M21 21v-4a6 6 0 0 0-4-5"/>',
-  court: '<path d="m3 6 5 5 4-7 4 7 5-5-2 13H5L3 6ZM5 22h14"/>',
-  ruin: '<path d="M4 21V7l5-3v8h6V4l5 3v14M2 21h20M9 21v-5h6v5"/>',
-  wilderness: '<path d="m12 2-7 9h4l-6 8h7v3h4v-3h7l-6-8h4L12 2Z"/>',
-  dice: '<rect x="3" y="3" width="18" height="18" rx="4"/><path d="M7 7h.01M17 7h.01M12 12h.01M7 17h.01M17 17h.01"/>',
-  refresh: '<path d="M20 7v5h-5M4 17v-5h5M5 7a8 8 0 0 1 13-2l2 3M4 16l2 3a8 8 0 0 0 13-2"/>',
-  copy: '<rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V3H3v13h5"/>',
-};
-function icon(name) { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name] || icons.dice}</svg>`; }
-function el(tag, className, text) {
-  const element = document.createElement(tag);
-  if (className) element.className = className;
-  if (text !== undefined) element.textContent = text;
-  return element;
-}
-function action(label, iconName, className = 'button') {
-  const button = el('button', className);
-  button.type = 'button';
-  button.innerHTML = icon(iconName);
-  button.append(document.createTextNode(label));
-  return button;
-}
-let toastTimer;
-function notify(message) {
-  const toast = document.querySelector('#toast');
-  toast.textContent = message;
-  toast.classList.add('visible');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toast.classList.remove('visible'), 3000);
-}
+import { icon, el, action, notify } from './ui.js?v=3';
+import { initPlanets } from './planet-ui.js?v=4';
 
 function createCategory(category, labels) {
   let result;
@@ -168,42 +134,88 @@ function createCategory(category, labels) {
   return section;
 }
 
-async function init() {
-  const loading = document.querySelector('#loading');
+async function initTags(container) {
+  const response = await fetch('./data/WN_TAGS_PL_v2.json');
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const data = validateData(await response.json());
+  const nav = document.querySelector('#category-nav');
+  nav.replaceChildren();
+  for (const category of data.categories) {
+    const link = el('a', 'nav-link');
+    link.href = `#${category.id_code}`;
+    link.innerHTML = icon(category.id_code);
+    link.append(el('span', '', category.name.replace('Tagi ', '')), el('small', '', category.tag_table.length));
+    nav.append(link);
+    container.append(createCategory(category, FIELD_LABELS));
+  }
+  const links = [...nav.querySelectorAll('a')];
+  function activate(id) {
+    links.forEach(link => {
+      if (link.hash === `#${id}`) link.setAttribute('aria-current', 'location');
+      else link.removeAttribute('aria-current');
+    });
+  }
+  activate(data.categories[0].id_code);
+  const observer = new IntersectionObserver(entries => {
+    const visible = entries.filter(entry => entry.isIntersecting);
+    if (visible.length) activate(visible[0].target.id);
+  }, { rootMargin: '-10% 0px -60% 0px' });
+  container.querySelectorAll('section').forEach(section => observer.observe(section));
+  const target = [...container.querySelectorAll('section')].find(section => `#${section.id}` === location.hash);
+  if (target && !container.hidden) target.scrollIntoView();
+}
+
+// Nowe generatory dodajemy jako kolejne pozycje rejestru z własną funkcją init.
+const generators = [
+  { id: 'tags', label: 'Tagi', title: 'Generator tagów', edition: 'WN-TAGS · PL', icon: 'dice', init: initTags },
+  { id: 'planets', label: 'Nazwy planet', title: 'Generator nazw planet', edition: 'TRAVELLER', icon: 'world', init: initPlanets },
+];
+const generatorNav = document.querySelector('#generator-nav');
+let activeGenerator;
+
+async function loadGenerator(generator) {
+  const loading = el('p', 'loading', 'Wczytywanie biblioteki…');
+  loading.setAttribute('role', 'status');
+  generator.panel.replaceChildren(loading);
   try {
-    const response = await fetch('./data/WN_TAGS_PL_v2.json');
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = validateData(await response.json());
-    const nav = document.querySelector('#category-nav');
-    const container = document.querySelector('#categories');
-    for (const category of data.categories) {
-      const link = el('a', 'nav-link');
-      link.href = `#${category.id_code}`;
-      link.innerHTML = icon(category.id_code);
-      link.append(el('span', '', category.name.replace('Tagi ', '')), el('small', '', category.tag_table.length));
-      nav.append(link);
-      container.append(createCategory(category, FIELD_LABELS));
-    }
+    await generator.init(generator.panel);
     loading.remove();
-    const links = [...nav.querySelectorAll('a')];
-    function activate(id) {
-      links.forEach(link => {
-        if (link.hash === `#${id}`) link.setAttribute('aria-current', 'location');
-        else link.removeAttribute('aria-current');
-      });
-    }
-    activate(data.categories[0].id_code);
-    const observer = new IntersectionObserver(entries => {
-      const visible = entries.filter(entry => entry.isIntersecting);
-      if (visible.length) activate(visible[0].target.id);
-    }, { rootMargin: '-10% 0px -60% 0px' });
-    container.querySelectorAll('section').forEach(section => observer.observe(section));
   } catch (error) {
     loading.classList.add('load-error');
-    loading.textContent = 'Nie udało się wczytać biblioteki. Odśwież stronę lub sprawdź połączenie.';
-    loading.append(action('Spróbuj ponownie', 'refresh'));
-    loading.querySelector('button').addEventListener('click', () => location.reload());
-    console.error('Błąd biblioteki tagów:', error);
+    loading.textContent = 'Nie udało się wczytać biblioteki. Sprawdź połączenie i spróbuj ponownie.';
+    const retry = action('Spróbuj ponownie', 'refresh');
+    retry.addEventListener('click', () => { generator.ready = loadGenerator(generator); });
+    loading.append(retry);
+    console.error(`Błąd generatora ${generator.id}:`, error);
   }
 }
-init();
+
+function selectGenerator() {
+  const generator = (location.hash === '#generators' && activeGenerator) ||
+    generators.find(item => `#${item.id}` === location.hash) || generators[0];
+  const changed = activeGenerator && activeGenerator !== generator;
+  activeGenerator = generator;
+  for (const item of generators) {
+    item.panel.hidden = item !== generator;
+    if (item === generator) item.link.setAttribute('aria-current', 'page');
+    else item.link.removeAttribute('aria-current');
+  }
+  document.querySelector('#tag-navigation').hidden = generator.id !== 'tags';
+  document.querySelector('#generator-title').textContent = generator.title;
+  document.querySelector('#generator-edition').textContent = generator.edition;
+  document.querySelector('#generator-credit').textContent = generator.id === 'tags' ? 'Dane: WN-TAGS · PL' : 'Autorskie nazwy · Traveller';
+  document.querySelector('#generator-credit').hidden = generator.id === 'planets';
+  if (changed) window.scrollTo({ top: 0, behavior: 'instant' });
+  generator.ready ??= loadGenerator(generator);
+}
+
+for (const generator of generators) {
+  generator.panel = document.querySelector(`#${generator.id}-panel`);
+  generator.link = el('a', 'nav-link generator-link');
+  generator.link.href = `#${generator.id}`;
+  generator.link.innerHTML = icon(generator.icon);
+  generator.link.append(el('span', '', generator.label));
+  generatorNav.append(generator.link);
+}
+window.addEventListener('hashchange', selectGenerator);
+selectGenerator();

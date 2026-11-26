@@ -8,23 +8,27 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; font-src 'none'; base-uri 'none'; object-src 'none'; form-action 'none'">
     <title>SoloMGtools</title>
     <link rel="icon" href="./favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="./styles.css">
-    <script type="module" src="./app.js?v=2"></script>
+    <link rel="stylesheet" href="./styles.css?v=4">
+    <script type="module" src="./app.js?v=4"></script>
   </head>
   <body>
-    <a class="skip-link" href="#categories">Przejdź do generatorów</a>
+    <a class="skip-link" href="#generators">Przejdź do generatora</a>
     <aside class="sidebar">
       <a class="brand" href="#"><span class="brand-mark" aria-hidden="true">✧</span><span>Solo<span class="brand-accent">MG</span>tools<small>WARSZTAT MISTRZA GRY</small></span></a>
-      <div class="nav-label">BIBLIOTEKA TAGÓW</div>
-      <nav id="category-nav" aria-label="Kategorie tagów"></nav>
+      <div class="nav-label">GENERATORY</div>
+      <nav id="generator-nav" aria-label="Wybór generatora"></nav>
+      <div id="tag-navigation">
+        <div class="nav-label">KATEGORIE TAGÓW</div>
+        <nav id="category-nav" aria-label="Kategorie tagów"></nav>
+      </div>
     </aside>
     <div class="workspace">
-      <header class="topbar"><h1>Generator tagów</h1><span class="edition">WN-TAGS <span>PL</span></span></header>
-      <main>
-        <div id="loading" role="status">Wczytywanie biblioteki tagów…</div>
-        <div id="categories"></div>
-        <noscript>Włącz JavaScript, aby korzystać z generatora tagów.</noscript>
-        <footer><a href="#">SoloMGtools</a><span>Dane: WN-TAGS · PL</span></footer>
+      <header class="topbar"><h1 id="generator-title">Generator tagów</h1><span class="edition" id="generator-edition">WN-TAGS · PL</span></header>
+      <main id="generators" tabindex="-1">
+        <div id="tags-panel"></div>
+        <div id="planets-panel" hidden></div>
+        <noscript>Włącz JavaScript, aby korzystać z generatorów.</noscript>
+        <footer><a href="#tags">SoloMGtools</a><span id="generator-credit">Dane: WN-TAGS · PL</span></footer>
       </main>
     </div>
     <div class="toast" id="toast" role="status"></div>
