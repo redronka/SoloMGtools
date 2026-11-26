@@ -1,7 +1,7 @@
 import { FIELD_LABELS, FIELDS, pickPair, generateResult, validateData } from './generator.js?v=2';
 import { icon, el, action, notify } from './ui.js?v=3';
 import { initPlanets } from './planet-ui.js?v=4';
-import { initUwp } from './uwp-ui.js?v=2';
+import { initUwp } from './uwp-ui.js?v=3';
 
 function createCategory(category, labels) {
   let result;

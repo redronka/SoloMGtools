@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { decodeProfile, extractMapData, formatProfile, getLevelMetric, ehex, EXAMPLE, EXAMPLE_PASTE } from '../uwp.js';
+import { decodeProfile, extractMapData, formatProfile, getLevelMetric, getPreviewValues, getPreviewValue, previewMetric, ehex, EXAMPLE, EXAMPLE_PASTE } from '../uwp.js';
 import { LEVEL_GUIDES } from '../uwp-levels.js';
 import { LAWS } from '../uwp-data.js';
 
@@ -232,4 +232,72 @@ test('Prawo pokazuje wszystkie poprzednie zakazy, z jednym oznaczonym bieżącym
     for (const entry of law.restrictions) assert.ok(formatProfile(result).includes(entry.description));
   }
   for (const code of ['?', 'S']) assert.equal(decodeProfile({ uwp: `A86774${code}-C` }).sections[0].items[6].restrictions, undefined);
+});
+
+test('Wszystkie osiem cech UWP pozwala przeglądać pełne zakresy bez zmiany profilu i kopii', () => {
+  for (const uwp of [EXAMPLE.uwp, 'F201321-8', 'A8AA74S-B', '???????-?']) {
+    const result = decodeProfile({ uwp });
+    const snapshot = structuredClone(result);
+    const copy = formatProfile(result);
+    const items = result.sections[0].items;
+    assert.equal(items.filter(item => item.previewKey).length, 8);
+    for (const item of items) {
+      const values = getPreviewValues(item);
+      assert.ok(values.includes(getPreviewValue(item)));
+      assert.equal(new Set(values).size, values.length);
+      for (const value of values) {
+        const preview = previewMetric(item, value);
+        assert.equal(preview.code, value);
+        assert.equal(preview.label, item.label);
+        assert.ok(preview.title && preview.description);
+        assert.ok(!/undefined|NaN/.test(JSON.stringify(preview)));
+      }
+      assert.strictEqual(previewMetric(item, getPreviewValue(item)), item);
+      assert.throws(() => previewMetric(item, '!'), RangeError);
+    }
+    assert.deepEqual(result, snapshot);
+    assert.equal(formatProfile(result), copy);
+  }
+});
+
+test('Podgląd kodów umownych portów, ustroju i prawa S zachowuje ich znaczenie', () => {
+  const [port, , , , , government, law] = decodeProfile({ uwp: EXAMPLE.uwp }).sections[0].items;
+  assert.deepEqual(getPreviewValues(port), [...'ABCDEXFGHY']);
+  assert.equal(previewMetric(port, 'F').title, 'Dobry port lokalny');
+  assert.match(previewMetric(port, 'F').extra, /100 Cr\/t/);
+  assert.equal(previewMetric(port, 'Y').value, null);
+  assert.ok(!getPreviewValues(government).includes('I'));
+  assert.ok(!getPreviewValues(government).includes('O'));
+  assert.equal(previewMetric(government, 'J').title, 'Jeden miejscowy klan Aslanów');
+  assert.equal(previewMetric(government, 'X').title, 'Hierarchia Droyne');
+  assert.equal(previewMetric(law, 'S').restrictions, undefined);
+  assert.equal(previewMetric(law, 'S').value, null);
+  const highLaw = previewMetric(law, 'L');
+  assert.equal(highLaw.restrictions.length, 20);
+  assert.equal(highLaw.restrictions.filter(entry => entry.current).length, 1);
+  assert.equal(highLaw.restrictions.at(-1).code, 'L');
+});
+
+test('Podgląd hydrografii zachowuje atmosferę źródłową i nie zmienia sąsiedniej karty', () => {
+  for (const [uwp, expected] of [['A8AA743-B', /nie musi być woda/], ['F201321-8', /lód/]]) {
+    const result = decodeProfile({ uwp });
+    const atmosphere = result.sections[0].items[2];
+    const hydro = result.sections[0].items[3];
+    const before = structuredClone(hydro);
+    previewMetric(atmosphere, '6');
+    assert.match(previewMetric(hydro, 'A').description, expected);
+    assert.deepEqual(hydro, before);
+  }
+});
+
+test('Wspólny podgląd zachowuje ujemną efektywność, -0 i szczególny zerowy Cx przy resecie', () => {
+  const result = decodeProfile({ economics: '(D8E-0)', culture: '[0000]' });
+  for (const item of result.sections.flatMap(section => section.items)) {
+    const snapshot = structuredClone(item);
+    for (const value of getPreviewValues(item)) previewMetric(item, value);
+    assert.strictEqual(previewMetric(item, getPreviewValue(item)), item);
+    assert.deepEqual(item, snapshot);
+  }
+  assert.equal(previewMetric(result.sections[0].items[3], 0).code, '-0');
+  assert.equal(previewMetric(result.sections[0].items[3], -5).code, '-5');
 });

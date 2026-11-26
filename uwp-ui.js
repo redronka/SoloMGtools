@@ -1,75 +1,82 @@
 import { el, action, notify } from './ui.js?v=3';
-import { decodeProfile, extractMapData, formatProfile, getLevelMetric, EXAMPLE, EXAMPLE_PASTE } from './uwp.js?v=2';
+import { decodeProfile, extractMapData, formatProfile, getPreviewValues, getPreviewValue, previewMetric, EXAMPLE, EXAMPLE_PASTE } from './uwp.js?v=3';
 
 function codeLabel(item) {
   return item.code + (item.value !== null && item.code !== String(item.value) ? ` = ${item.value}` : '');
 }
 
-function createLevelCard(item) {
-  const card = el('article', 'uwp-card uwp-level-card');
-  card.dataset.guide = item.guideKey;
-  const top = el('div', 'uwp-card-top');
-  const code = el('span', 'uwp-code', codeLabel(item));
-  top.append(el('h4', '', item.label), code);
-  const explanation = el('details', 'uwp-explanation');
-  explanation.append(el('summary', '', 'Definicja i skala'));
-  if (item.originalName) explanation.append(el('p', 'uwp-muted', `Nazwa oryginalna: ${item.originalName}.`));
-  explanation.append(el('p', '', item.description), el('p', '', item.scaleDescription));
-  const body = el('div', 'uwp-level-body');
-  const toolbar = el('div', 'uwp-level-controls');
-  const lower = el('button', 'button uwp-step', '← Niżej');
-  const higher = el('button', 'button uwp-step', 'Wyżej →');
-  const reset = el('button', 'button subtle uwp-reset', 'Reset');
-  for (const button of [lower, higher, reset]) button.type = 'button';
-  lower.setAttribute('aria-label', `${item.label}: pokaż niższy poziom`);
-  higher.setAttribute('aria-label', `${item.label}: pokaż wyższy poziom`);
-  reset.setAttribute('aria-label', `${item.label}: wróć do wartości źródłowej ${item.code}`);
-  const previewStatus = el('p', 'uwp-preview-status');
-  previewStatus.setAttribute('role', 'status');
-  toolbar.append(lower, higher, reset);
-  card.append(top, explanation, body, toolbar, previewStatus);
-  let shown = item.value;
-
-  function update() {
-    const view = shown === item.value ? item : getLevelMetric(item.guideKey, shown);
-    code.textContent = codeLabel(view);
-    body.replaceChildren(el('p', 'uwp-value', view.title));
+function renderMetricBody(body, view) {
+  body.replaceChildren(el('p', 'uwp-value', view.title));
+  if (view.interpretation) {
     for (const [label, text] of [['Świat', view.interpretation.world], ['Dla przybyszów', view.interpretation.visitors]]) {
       const paragraph = el('p', 'uwp-interpretation');
       paragraph.append(el('strong', '', `${label}: `), document.createTextNode(text));
       body.append(paragraph);
     }
-    if (item.guideKey === 'technology' && view.extra) body.append(el('p', 'uwp-extra', view.extra));
-    lower.disabled = shown <= item.min;
-    higher.disabled = shown >= item.max;
-    reset.disabled = shown === item.value;
-    previewStatus.textContent = shown === item.value ? `Wartość z profilu: ${codeLabel(item)}` : `Podgląd: ${codeLabel(view)} · W profilu: ${codeLabel(item)}`;
-    card.classList.toggle('is-preview', shown !== item.value);
+  } else body.append(el('p', 'uwp-description', view.description));
+  if (view.restrictions) {
+    const list = el('ul', 'uwp-law-list');
+    for (const entry of view.restrictions) {
+      const line = el('li');
+      line.append(el(entry.current ? 'strong' : 'span', '', `${entry.code}${entry.current ? ' — bieżący' : ''}: ${entry.description}`));
+      list.append(line);
+    }
+    body.append(list);
   }
-  lower.addEventListener('click', () => { shown = Math.max(item.min, shown - 1); update(); });
-  higher.addEventListener('click', () => { shown = Math.min(item.max, shown + 1); update(); });
-  reset.addEventListener('click', () => { shown = item.value; update(); });
-  update();
-  return card;
+  if (view.extra && (!view.interpretation || view.guideKey === 'technology')) body.append(el('p', 'uwp-extra', view.extra));
 }
 
 function createMetricCard(item) {
-  if (item.guideKey) return createLevelCard(item);
-  const card = el('article', 'uwp-card');
+  const values = getPreviewValues(item);
+  const card = el('article', `uwp-card${values.length ? ' uwp-level-card' : ''}`);
+  if (item.guideKey) card.dataset.guide = item.guideKey;
+  if (item.previewKey) card.dataset.parameter = item.previewKey;
   const top = el('div', 'uwp-card-top');
-  top.append(el('h4', '', item.label), el('span', 'uwp-code', codeLabel(item)));
-  card.append(top, el('p', 'uwp-value', item.title), el('p', 'uwp-description', item.description));
-  if (item.restrictions) {
-    const list = el('ul', 'uwp-law-list');
-    for (const entry of item.restrictions) {
-      const line = el('li');
-      const text = `${entry.code}${entry.current ? ' — bieżący' : ''}: ${entry.description}`;
-      line.append(el(entry.current ? 'strong' : 'span', '', text));
-      list.append(line);
-    }
-    card.append(list);
+  const code = el('span', 'uwp-code', codeLabel(item));
+  top.append(el('h4', '', item.label), code);
+  card.append(top);
+  if (item.guideKey) {
+    const explanation = el('details', 'uwp-explanation');
+    explanation.append(el('summary', '', 'Definicja i skala'));
+    if (item.originalName) explanation.append(el('p', 'uwp-muted', `Nazwa oryginalna: ${item.originalName}.`));
+    explanation.append(el('p', '', item.description), el('p', '', item.scaleDescription));
+    card.append(explanation);
   }
-  if (item.extra) card.append(el('p', 'uwp-extra', item.extra));
+  const body = el('div', 'uwp-level-body');
+  card.append(body);
+  renderMetricBody(body, item);
+  if (!values.length) return card;
+
+  const toolbar = el('div', 'uwp-level-controls');
+  const categorical = ['port', 'atmosphere', 'government'].includes(item.previewKey);
+  const lower = el('button', 'button uwp-step', categorical ? '← Poprzedni' : '← Niżej');
+  const higher = el('button', 'button uwp-step', categorical ? 'Następny →' : 'Wyżej →');
+  const reset = el('button', 'button subtle uwp-reset', 'Reset');
+  for (const button of [lower, higher, reset]) button.type = 'button';
+  lower.setAttribute('aria-label', `${item.label}: pokaż ${categorical ? 'poprzedni kod' : 'niższy poziom'}`);
+  higher.setAttribute('aria-label', `${item.label}: pokaż ${categorical ? 'następny kod' : 'wyższy poziom'}`);
+  reset.setAttribute('aria-label', `${item.label}: wróć do wartości źródłowej ${item.code}`);
+  const previewStatus = el('p', 'uwp-preview-status');
+  previewStatus.setAttribute('role', 'status');
+  toolbar.append(lower, higher, reset);
+  card.append(toolbar, previewStatus);
+  const originalIndex = values.indexOf(getPreviewValue(item));
+  let shownIndex = originalIndex;
+
+  function update() {
+    const view = previewMetric(item, values[shownIndex]);
+    code.textContent = codeLabel(view);
+    renderMetricBody(body, view);
+    lower.disabled = shownIndex === 0;
+    higher.disabled = shownIndex === values.length - 1;
+    reset.disabled = shownIndex === originalIndex;
+    previewStatus.textContent = shownIndex === originalIndex ? `Wartość z profilu: ${codeLabel(item)}` : `Podgląd: ${codeLabel(view)} · W profilu: ${codeLabel(item)}`;
+    card.classList.toggle('is-preview', shownIndex !== originalIndex);
+  }
+  lower.addEventListener('click', () => { shownIndex = Math.max(0, shownIndex - 1); update(); });
+  higher.addEventListener('click', () => { shownIndex = Math.min(values.length - 1, shownIndex + 1); update(); });
+  reset.addEventListener('click', () => { shownIndex = originalIndex; update(); });
+  update();
   return card;
 }
 

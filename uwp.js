@@ -101,22 +101,50 @@ export function extractMapData(input) {
   return { fields: result, errors };
 }
 
+const UWP_PREVIEW_CODES = {
+  port: 'ABCDEXFGHY', size: EHEX.slice(0, 16), atmosphere: EHEX.slice(0, 16),
+  hydro: EHEX.slice(0, 11), population: EHEX.slice(0, 16), government: EHEX,
+  law: `${EHEX.slice(0, 21)}S`, technology: EHEX.slice(0, 21),
+};
+const UWP_LABELS = { port: 'Port', size: 'Wielkość', atmosphere: 'Atmosfera', hydro: 'Hydrografia', population: 'Populacja', government: 'Ustrój', law: 'Poziom prawa', technology: 'Poziom technologiczny' };
+
+function uwpMetric(key, code, context = {}) {
+  const value = ehex(code);
+  let item;
+  if (code === '?') item = unknown(UWP_LABELS[key]);
+  else if (key === 'port') item = metric('Port', code, ...PORTS[code], null);
+  else if (key === 'size') {
+    const gravity = [null, .122, .240, .377, .5, .625, .840, .875, 1, 1.120, 1.250, 1.375, 1.5, 1.625, 1.750, 1.875];
+    item = metric('Wielkość', code, value === 0 ? 'Pas asteroid' : `Średnica ok. ${fmt(value * 1600)} km`, value === 0 ? 'Światem jest pas małych ciał, a nie pojedyncza planeta.' : `Orientacyjna grawitacja: ${fmt(gravity[value])} g przy gęstości zbliżonej do ziemskiej. Rzeczywista gęstość może ją zmieniać.`);
+  } else if (key === 'atmosphere') item = metric('Atmosfera', code, ...ATMOSPHERES[value]);
+  else if (key === 'hydro') {
+    const a = context.atmosphere;
+    item = metric('Hydrografia', code, value === 0 ? 'Suchy świat' : `${value * 10}% powierzchni pokrytej cieczą`, value === 0 ? 'Brak rozległych mórz i oceanów.' : `To przybliżony udział powierzchni mórz i oceanów.${a !== null && a >= 10 ? ' Przy takiej atmosferze cieczą nie musi być woda.' : ''}${a !== null && a <= 1 ? ' W próżni lub śladowej atmosferze zasoby mogą występować jako lód.' : ''}`);
+  } else if (key === 'population') {
+    const names = ['Brak lub nieliczni mieszkańcy', 'Dziesiątki', 'Setki', 'Tysiące', 'Dziesiątki tysięcy', 'Setki tysięcy', 'Miliony', 'Dziesiątki milionów', 'Setki milionów', 'Miliardy', 'Dziesiątki miliardów', 'Setki miliardów', 'Biliony', 'Dziesiątki bilionów', 'Setki bilionów', 'Biliardy'];
+    item = metric('Populacja', code, names[value], value === 0 ? 'Kod 0 oznacza brak lub mniej niż 10 mieszkańców.' : `Rząd wielkości: od ${fmt(10 ** value)} do mniej niż ${fmt(10 ** (value + 1))} mieszkańców. Dokładna liczba wymaga mnożnika z PBG; sam UWP jej nie podaje.`);
+  } else if (key === 'government') item = metric('Ustrój', code, ...GOVERNMENTS[code]);
+  else if (key === 'law') item = code === 'S' ? metric('Poziom prawa', code, 'Sytuacja specjalna / zmienna', 'Zasady zależą od miejsca lub okoliczności; kod nie podaje jednolitego poziomu.', '', null) : lawMetric(code);
+  else if (key === 'technology') item = getLevelMetric('technology', value, code);
+  return { ...item, previewKey: key, previewContext: context };
+}
+
 function decodeUwp(parsed) {
-  const [port, size, atmosphere, hydro, population, government, law, tech] = parsed.chars;
-  const s = ehex(size), a = ehex(atmosphere), h = ehex(hydro), p = ehex(population), t = ehex(tech);
-  const gravity = [null, .122, .240, .377, .5, .625, .840, .875, 1, 1.120, 1.250, 1.375, 1.5, 1.625, 1.750, 1.875];
-  const popNames = ['Brak lub nieliczni mieszkańcy', 'Dziesiątki', 'Setki', 'Tysiące', 'Dziesiątki tysięcy', 'Setki tysięcy', 'Miliony', 'Dziesiątki milionów', 'Setki milionów', 'Miliardy', 'Dziesiątki miliardów', 'Setki miliardów', 'Biliony', 'Dziesiątki bilionów', 'Setki bilionów', 'Biliardy'];
-  const items = [
-    port === '?' ? unknown('Port') : metric('Port', port, ...PORTS[port], null),
-    size === '?' ? unknown('Wielkość') : metric('Wielkość', size, s === 0 ? 'Pas asteroid' : `Średnica ok. ${fmt(s * 1600)} km`, s === 0 ? 'Światem jest pas małych ciał, a nie pojedyncza planeta.' : `Orientacyjna grawitacja: ${fmt(gravity[s])} g przy gęstości zbliżonej do ziemskiej. Rzeczywista gęstość może ją zmieniać.`),
-    atmosphere === '?' ? unknown('Atmosfera') : metric('Atmosfera', atmosphere, ...ATMOSPHERES[a]),
-    hydro === '?' ? unknown('Hydrografia') : metric('Hydrografia', hydro, h === 0 ? 'Suchy świat' : `${h * 10}% powierzchni pokrytej cieczą`, h === 0 ? 'Brak rozległych mórz i oceanów.' : `To przybliżony udział powierzchni mórz i oceanów.${a !== null && a >= 10 ? ' Przy takiej atmosferze cieczą nie musi być woda.' : ''}${a !== null && a <= 1 ? ' W próżni lub śladowej atmosferze zasoby mogą występować jako lód.' : ''}`),
-    population === '?' ? unknown('Populacja') : metric('Populacja', population, popNames[p], p === 0 ? 'Kod 0 oznacza brak lub mniej niż 10 mieszkańców.' : `Rząd wielkości: od ${fmt(10 ** p)} do mniej niż ${fmt(10 ** (p + 1))} mieszkańców. Dokładna liczba wymaga mnożnika z PBG; sam UWP jej nie podaje.`),
-    government === '?' ? unknown('Ustrój') : metric('Ustrój', government, ...GOVERNMENTS[government]),
-    law === '?' ? unknown('Poziom prawa') : law === 'S' ? metric('Poziom prawa', law, 'Sytuacja specjalna / zmienna', 'Zasady zależą od miejsca lub okoliczności; kod nie podaje jednolitego poziomu.', '', null) : lawMetric(law),
-    tech === '?' ? unknown('Poziom technologiczny') : getLevelMetric('technology', t, tech),
-  ];
-  return { title: 'Profil świata', code: parsed.code, items };
+  const keys = Object.keys(UWP_PREVIEW_CODES);
+  return { title: 'Profil świata', code: parsed.code, items: keys.map((key, i) => uwpMetric(key, parsed.chars[i], { atmosphere: ehex(parsed.chars[2]) })) };
+}
+
+// UWP ma również kody umowne (port, ustrój, prawo S), więc podgląd nie używa samego +/-1.
+export function getPreviewValues(item) {
+  if (item.previewKey) return [...(item.code === '?' ? '?' : ''), ...UWP_PREVIEW_CODES[item.previewKey]];
+  if (item.guideKey) return Array.from({ length: item.max - item.min + 1 }, (_, i) => item.min + i);
+  return [];
+}
+export function getPreviewValue(item) { return item.previewKey ? item.code : item.value; }
+export function previewMetric(item, value) {
+  if (!getPreviewValues(item).includes(value)) throw new RangeError('Poziom poza zakresem podglądu.');
+  if (value === getPreviewValue(item)) return item;
+  return item.previewKey ? uwpMetric(item.previewKey, value, item.previewContext) : getLevelMetric(item.guideKey, value);
 }
 
 export function getLevelMetric(key, value, originalCode) {
