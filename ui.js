@@ -25,6 +25,16 @@ export function action(label, iconName, className = 'button') {
   button.append(document.createTextNode(label));
   return button;
 }
+export function headingPicker(id) {
+  const label = el('label', 'markdown-level', 'Poziom nagłówków Markdown');
+  label.htmlFor = id;
+  const select = el('select');
+  select.id = id;
+  for (let level = 1; level <= 4; level++) select.append(new Option('#'.repeat(level), String(level)));
+  select.value = '2';
+  label.append(select);
+  return { label, select };
+}
 let toastTimer;
 export function notify(message) {
   const toast = document.querySelector('#toast');

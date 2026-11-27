@@ -45,7 +45,7 @@ nav { display: grid; gap: 4px; }
 .nav-link:hover { background: #22222d; }
 .nav-link[aria-current] { background: #2a253e; color: #c4b4ff; }
 .workspace { margin-left: 224px; }
-.topbar { min-height: 58px; border-bottom: 1px solid var(--line); padding: 12px 28px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.topbar { min-height: 58px; border-bottom: 1px solid var(--line); padding: 12px 28px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
 h1 { font-size: 18px; font-weight: 600; }
 .edition { font-size: 11px; letter-spacing: 1.2px; color: #aaa7ba; white-space: nowrap; }
 .edition span { border: 1px solid #464052; border-radius: 4px; padding: 3px 5px; margin-left: 6px; color: #c2b4ef; }
@@ -301,6 +301,19 @@ button:disabled:hover { background: transparent; }
 .wn-toggle { display: flex; align-items: center; gap: 10px; min-height: 44px; margin-top: 12px; font-size: 16px; color: var(--muted); cursor: pointer; }
 .wn-toggle input { width: 18px; height: 18px; accent-color: var(--accent); }
 .wn-toolbar { display: flex; justify-content: flex-end; padding-top: 8px; }
+.markdown-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.markdown-level { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; }
+.markdown-level select { width: auto; min-width: 90px; }
+.wn-export-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; margin-left: auto; }
+.wn-export-controls select { width: 82px; min-height: 36px; padding-top: 6px; padding-bottom: 6px; font-size: 14px; }
+.wn-export-controls .button { min-height: 36px; padding: 7px 10px; }
+.wn-session-count { color: var(--muted); font-size: 13px; white-space: nowrap; }
+.wn-person { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+.wn-person .wn-field { min-width: 0; grid-template-columns: minmax(0, 1fr); gap: 4px; }
+.wn-person .wn-field-label { padding-top: 0; }
+.wn-name-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; }
+.wn-name-copy { width: 40px; min-height: 40px; padding: 8px; margin-top: 22px; }
+.wn-name-copy svg { width: 16px; height: 16px; }
 @media (max-width: 700px) {
   .wn-category-picker { margin-bottom: 18px; }
   .wn-navigation { margin: 10px 0 0; padding: 0; gap: 6px; overflow: visible; }

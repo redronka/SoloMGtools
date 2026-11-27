@@ -1,5 +1,6 @@
 import { PORTS, ATMOSPHERES, GOVERNMENTS, LAWS, TECH_EXAMPLES } from './uwp-data.js?v=1';
 import { LEVEL_GUIDES } from './uwp-levels.js?v=1';
+import { heading, startLevel } from './markdown.js';
 
 export const EHEX = '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ';
 export const EXAMPLE = { uwp: 'A593943-A', importance: '{ 4 }', economics: '(D8E+1)', culture: '[6D27]' };
@@ -214,13 +215,14 @@ export function decodeProfile(fields) {
   return { errors, sections, warnings, fields: canonical };
 }
 
-export function formatProfile(result) {
-  const sections = result.sections.map(section => `${section.title}: ${section.code}\n${section.items.map(item => {
-    const lines = [`${item.label}${item.originalName ? ` (${item.originalName})` : ''} [${item.code}${item.value !== null && item.code !== String(item.value) ? ` = ${item.value}` : ''}]: ${item.title}`, item.description];
+export function formatProfile(result, level = 2) {
+  level = startLevel(level);
+  const sections = result.sections.map(section => `${heading(level + 1, `${section.title}: ${section.code}`)}\n\n${section.items.map(item => {
+    const lines = [heading(level + 2, `${item.label}${item.originalName ? ` (${item.originalName})` : ''} [${item.code}${item.value !== null && item.code !== String(item.value) ? ` = ${item.value}` : ''}]: ${item.title}`), item.description];
     if (item.interpretation) lines.push(`Świat: ${item.interpretation.world}`, `Dla przybyszów: ${item.interpretation.visitors}`);
     if (item.restrictions) lines.push(...item.restrictions.map(entry => `${entry.code}${entry.current ? ' (bieżący)' : ''}: ${entry.description}`));
     if (item.extra) lines.push(item.extra);
     return lines.join('\n');
   }).join('\n\n')}`);
-  return [...sections, ...result.warnings.map(warning => `Uwaga: ${warning}`), 'Podstawa: Traveller Map — Second Survey. Ceny paliwa i przykłady wyposażenia: Mongoose Traveller SRD. Opisy poziomów Ex/Cx i wskazówki do sesji są interpretacją MG; TL nie gwarantuje dostępności każdego urządzenia. Kopia zawiera wartości źródłowe, niezależnie od podglądu innych poziomów.', 'https://travellermap.com/doc/secondsurvey', 'https://www.traveller-srd.com/core-rules/spacecraft-operations/', 'https://www.traveller-srd.com/core-rules/equipment/'].join('\n\n');
+  return [heading(level, 'Profil Świata'), ...sections, ...result.warnings.map(warning => `Uwaga: ${warning}`), heading(level + 1, 'Źródła i uwagi'), 'Podstawa: Traveller Map — Second Survey. Ceny paliwa i przykłady wyposażenia: Mongoose Traveller SRD. Opisy poziomów Ex/Cx i wskazówki do sesji są interpretacją MG; TL nie gwarantuje dostępności każdego urządzenia. Kopia zawiera wartości źródłowe, niezależnie od podglądu innych poziomów.', 'https://travellermap.com/doc/secondsurvey', 'https://www.traveller-srd.com/core-rules/spacecraft-operations/', 'https://www.traveller-srd.com/core-rules/equipment/'].join('\n\n');
 }

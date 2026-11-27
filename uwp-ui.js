@@ -1,5 +1,6 @@
-import { el, action, notify } from './ui.js?v=3';
-import { decodeProfile, extractMapData, formatProfile, getPreviewValues, getPreviewValue, previewMetric, EXAMPLE, EXAMPLE_PASTE } from './uwp.js?v=3';
+import { el, action, notify, headingPicker } from './ui.js?v=4';
+import { sessionResults } from './session-results.js';
+import { decodeProfile, extractMapData, formatProfile, getPreviewValues, getPreviewValue, previewMetric, EXAMPLE, EXAMPLE_PASTE } from './uwp.js?v=4';
 
 function codeLabel(item) {
   return item.code + (item.value !== null && item.code !== String(item.value) ? ` = ${item.value}` : '');
@@ -152,8 +153,11 @@ export function initUwp(container) {
   const resultBar = el('div', 'uwp-result-bar');
   const resultTitle = el('h2', '', 'Odczyt profilu');
   const copy = action('Kopiuj opis', 'copy', 'button subtle');
+  const markdown = headingPicker('uwp-markdown-level');
+  const copyActions = el('div', 'markdown-actions');
+  copyActions.append(markdown.label, copy);
   copy.disabled = true;
-  resultBar.append(resultTitle, copy);
+  resultBar.append(resultTitle, copyActions);
   const output = el('div');
   const notes = el('p', 'uwp-muted uwp-reading-note', 'Opisy poziomów ekonomii i kultury oraz ich skutków są interpretacją MG opartą na skalach Second Survey (Traveller 5). Podgląd zmienia tylko opis na danej karcie; kopiowanie zachowuje wartości z profilu. Ceny paliwa i przykłady sprzętu: Mongoose Traveller SRD. TL nie gwarantuje dostępności każdego urządzenia.');
   const references = el('details', 'uwp-reference');
@@ -216,6 +220,7 @@ export function initUwp(container) {
   function render(result) {
     resetErrors();
     current = result;
+    sessionResults.add(level => formatProfile(result, level));
     copy.disabled = false;
     output.replaceChildren();
     if (result.warnings.length) {
@@ -270,7 +275,7 @@ export function initUwp(container) {
   });
   copy.addEventListener('click', async () => {
     if (!current) return;
-    try { await navigator.clipboard.writeText(formatProfile(current)); notify('Opis świata skopiowany.'); }
+    try { await navigator.clipboard.writeText(formatProfile(current, markdown.select.value)); notify('Opis świata skopiowany jako Markdown.'); }
     catch { notify('Schowek jest niedostępny. Zaznacz i skopiuj opis.'); }
   });
   emptyOutput();

@@ -1,5 +1,7 @@
 import { validatePlanetData, pickPlanetName, formatPlanetName } from './planets.js?v=3';
-import { el, action, notify } from './ui.js?v=3';
+import { el, action, notify } from './ui.js?v=4';
+import { heading } from './markdown.js';
+import { sessionResults } from './session-results.js';
 
 function createPlanetType(type) {
   let name;
@@ -22,6 +24,8 @@ function createPlanetType(type) {
   copy.setAttribute('aria-label', `Kopiuj nazwę i typ — ${type.name}`);
   roll.addEventListener('click', () => {
     name = pickPlanetName(type, name);
+    const saved = name;
+    sessionResults.add(level => `${heading(Number(level), `Planeta: ${saved}`)}\n\nTyp: ${type.name} (${type.label})`);
     output.textContent = formatPlanetName(name, type);
     output.classList.remove('empty');
     copy.disabled = false;

@@ -1,4 +1,5 @@
 import { FIELD_LABELS, FIELDS } from './generator.js?v=2';
+import { heading, startLevel } from './markdown.js';
 
 export function plainText(text) {
   return String(text).replace(/\*{1,3}([^*]+)\*{1,3}/g, '$1');
@@ -122,7 +123,7 @@ export function createGeneratorLibrary(data, tagsData) {
 
 // Replaying with the saved choices preserves independent fields. Keys of dependent
 // fields include their parent result, so changing a selector rebuilds only its branch.
-export function generateSet(library, generatorId, { previous, rng = Math.random, tableId } = {}) {
+export function generateSet(library, generatorId, { previous, rng = Math.random, tableId, tableIds } = {}) {
   const saved = previous?.choices || {};
   const choices = {};
   let nodeCount = 0;
@@ -244,10 +245,11 @@ export function generateSet(library, generatorId, { previous, rng = Math.random,
     }
     return node;
   }
-  const tree = tableId
-    ? { kind: 'generator', key: generatorId, generatorId, children: [tableNode(tableId, `${generatorId}/${tableId}`, { results: new Map() })] }
+  const selectedTables = tableIds || (tableId ? [tableId] : null);
+  const tree = selectedTables
+    ? { kind: 'generator', key: generatorId, generatorId, children: selectedTables.map(id => tableNode(id, `${generatorId}/${id}`, { results: new Map() })) }
     : generatorNode(generatorId, generatorId);
-  return { generatorId, tableId, choices, tree };
+  return { generatorId, tableId, tableIds, choices, tree };
 }
 
 export function updateChoice(library, result, key, value, rng = Math.random) {
@@ -261,30 +263,49 @@ export function updateChoice(library, result, key, value, rng = Math.random) {
     selection = { rowId: row.id, roll: row.roll?.min ?? [row.first_roll, row.second_roll] };
   } else if (node.kind === 'choice' && !node.options.some(option => option.value === value)) throw new Error('Nieprawidłowy wybór.');
   else if (node.kind === 'toggle' && typeof value !== 'boolean') throw new Error('Nieprawidłowy wybór.');
-  return generateSet(library, result.generatorId, { previous: { choices: { ...result.choices, [key]: selection } }, tableId: result.tableId, rng });
+  return generateSet(library, result.generatorId, { previous: { choices: { ...result.choices, [key]: selection } }, tableId: result.tableId, tableIds: result.tableIds, rng });
 }
 
 export function rerollSet(library, result, rng = Math.random) {
   const choices = Object.fromEntries(flattenNodes(result.tree)
     .filter(node => node.kind === 'choice' || node.kind === 'toggle')
     .map(node => [node.key, result.choices[node.key]]));
-  return generateSet(library, result.generatorId, { previous: { choices }, tableId: result.tableId, rng });
+  return generateSet(library, result.generatorId, { previous: { choices }, tableId: result.tableId, tableIds: result.tableIds, rng });
 }
 
 export function flattenNodes(tree) {
   return [tree, ...(tree.children || []).flatMap(flattenNodes)];
 }
 
-export function formatGeneratorSet(library, result) {
+export function formatName(library, result) {
+  return result.tree.children.filter(node => node.kind === 'table').map(node => {
+    const table = library.tables.get(node.tableId);
+    const row = table.rows.find(item => item.id === node.rowId);
+    return plainText(rowText(table, row));
+  }).join(' ');
+}
+
+export function formatNameEntry(library, result) {
+  const type = result.tree.children.find(node => node.kind === 'table').tableId.split('-').at(-1);
+  const labels = { male: 'Mężczyzna', female: 'Kobieta', surname: 'Nazwisko', place: 'Miejsce' };
+  return `${labels[type]}: ${formatName(library, result)}`;
+}
+
+export function formatGeneratorSet(library, result, level = 2) {
+  level = startLevel(level);
   function format(node, depth) {
     if (node.kind === 'generator') {
-      return [library.generators.get(node.generatorId).name_pl, ...node.children.flatMap(child => format(child, depth + 1))];
+      const title = heading(level + depth, library.generators.get(node.generatorId).name_pl);
+      if (library.generators.get(node.generatorId).category_id === 'names') {
+        return [title, formatName(library, { tree: node })];
+      }
+      return [title, ...node.children.flatMap(child => format(child, depth + 1))];
     }
     if (node.kind !== 'table') return [];
     const table = library.tables.get(node.tableId);
     const row = table.rows.find(item => item.id === node.rowId);
     const description = rowDescription(library, row);
-    return [`${'  '.repeat(Math.max(0, depth - 1))}${table.name_pl}: ${plainText(rowText(table, row))}${description ? `\n${plainText(description)}` : ''}`, ...node.children.flatMap(child => format(child, depth + 1))];
+    return [heading(level + depth, table.name_pl), rowText(table, row), ...(description ? [description] : []), ...node.children.flatMap(child => format(child, depth + 1))];
   }
   return format(result.tree, 0).join('\n\n');
 }

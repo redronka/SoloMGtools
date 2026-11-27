@@ -1,11 +1,23 @@
 import { FIELD_LABELS, FIELDS, pickPair, generateResult, validateData } from './generator.js?v=2';
-import { icon, el, action, notify } from './ui.js?v=3';
-import { initPlanets } from './planet-ui.js?v=4';
-import { initUwp } from './uwp-ui.js?v=3';
-import { initGenerators } from './generators-ui.js?v=4';
+import { icon, el, action, notify } from './ui.js?v=4';
+import { initPlanets } from './planet-ui.js?v=5';
+import { initUwp } from './uwp-ui.js?v=4';
+import { initGenerators } from './generators-ui.js?v=8';
+import { heading } from './markdown.js';
+import { sessionResults } from './session-results.js';
 
 function createCategory(category, labels) {
   let result;
+  let updateSaved;
+  function saveResult(isNew = false) {
+    const saved = structuredClone(result);
+    const format = level => [heading(Number(level), category.name), ...saved.tags.flatMap((tag, i) => [
+      heading(Number(level) + 1, `TAG ${i + 1}: ${tag.name}`), tag.description,
+      ...FIELDS.flatMap(field => [heading(Number(level) + 2, labels[field]), saved.entries[field][i]]),
+    ])].join('\n\n');
+    if (isNew) updateSaved = sessionResults.add(format);
+    else updateSaved(format);
+  }
   const section = el('section', 'category');
   section.id = category.id_code;
   section.setAttribute('aria-labelledby', `${category.id_code}-title`);
@@ -87,6 +99,7 @@ function createCategory(category, labels) {
         select.value = entry;
         select.addEventListener('change', () => {
           result.entries[field][i] = select.value;
+          saveResult();
           value.textContent = select.value;
           status.textContent = `${labels[field]}, tag ${i + 1}: ${select.value}`;
         });
@@ -102,6 +115,7 @@ function createCategory(category, labels) {
     reroll.title = 'Zachowaj tagi i ponownie wylosuj ich propozycje';
     reroll.addEventListener('click', () => {
       result = generateResult(category, result.tags.map(tag => tag.id_code));
+      saveResult(true);
       render();
       status.textContent = 'Wylosowano nowe inspiracje dla wybranych tagów.';
     });
@@ -119,6 +133,7 @@ function createCategory(category, labels) {
     selects.forEach(({ select }, i) => { select.value = ids[i]; });
     syncOptions();
     result = generateResult(category, ids);
+    saveResult(true);
     render();
     status.textContent = `Wybrane tagi: ${result.tags.map(tag => tag.name).join(' i ')}. Wylosowano po dwie propozycje dla każdej podkategorii.`;
   }
@@ -207,6 +222,8 @@ function selectGenerator() {
   document.querySelector('#tag-navigation').hidden = generator.id !== 'tags';
   document.querySelector('#generator-title').textContent = generator.title;
   document.querySelector('#generator-edition').textContent = generator.edition;
+  document.querySelector('#generator-edition').hidden = !generator.edition;
+  document.querySelector('#wn-export-controls').hidden = generator.id !== 'wn-generators';
   document.querySelector('#generator-credit').textContent = 'Dane: WN-TAGS · PL';
   document.querySelector('#generator-credit').hidden = generator.id !== 'tags';
   if (changed) window.scrollTo({ top: 0, behavior: 'instant' });

@@ -1,5 +1,6 @@
-import { createGeneratorLibrary, generateSet, updateChoice, rerollSet, rowText, rowDescription, plainText, formatGeneratorSet } from './generators.js?v=4';
-import { el, action, notify } from './ui.js?v=3';
+import { createGeneratorLibrary, generateSet, updateChoice, rerollSet, rowText, rowDescription, plainText, formatName, formatNameEntry, formatGeneratorSet } from './generators.js?v=7';
+import { el, action, notify, headingPicker } from './ui.js?v=4';
+import { sessionResults } from './session-results.js';
 
 function appendText(element, text) {
   // Only source emphasis is interpreted; source HTML is always rendered as text.
@@ -76,7 +77,7 @@ function renderSet(library, result, output, change) {
     visible.setAttribute('aria-hidden', 'true');
     appendText(visible, rowText(table, row));
     const select = el('select', 'entry-select');
-    select.id = `wn-${encodeURIComponent(node.key)}`;
+    select.id = `${output.id || 'wn'}-${encodeURIComponent(node.key)}`;
     select.dataset.wnKey = node.key;
     label.htmlFor = select.id;
     select.setAttribute('aria-label', table.name_pl);
@@ -109,10 +110,80 @@ function renderSet(library, result, output, change) {
   if (focusedKey) [...output.querySelectorAll('[data-wn-key]')].find(node => node.dataset.wnKey === focusedKey)?.focus({ preventScroll: true });
 }
 
-function createCard(library, generator) {
+function createNamesCard(library, generator) {
+  const card = el('section', 'wn-card');
+  const heading = el('h3', '', generator.name_pl);
+  heading.id = `wn-${generator.id}-title`;
+  card.setAttribute('aria-labelledby', heading.id);
+  const header = el('div', 'wn-card-header');
+  header.append(heading);
+  card.append(header);
+  const buttons = el('div', 'wn-name-actions');
+  const output = el('div', 'wn-name-results');
+  const status = el('p', 'sr-only');
+  status.setAttribute('role', 'status');
+  const people = [];
+  const toolbar = el('div', 'wn-toolbar');
+  toolbar.hidden = true;
+  const copy = action('Kopiuj zestaw', 'copy', 'button subtle');
+  copy.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(people.map(person => formatNameEntry(library, person.result)).join('\n'));
+      notify('Imiona i nazwy skopiowane.');
+    } catch { notify('Schowek jest niedostępny. Zaznacz i skopiuj wyniki.'); }
+  });
+  toolbar.append(copy);
+  for (const id of generator.table_ids) {
+    // Given-name buttons generate a complete person; places and surnames can still be rolled separately.
+    const paired = /-(male|female)$/.test(id);
+    const label = `${library.tables.get(id).name_pl}${paired ? ' + nazwisko' : ''}`;
+    const button = action(label, 'dice', 'button');
+    button.setAttribute('aria-label', `Losuj — ${generator.name_pl}: ${label}`);
+    button.addEventListener('click', () => {
+      try {
+        const tableIds = paired ? [id, `${generator.id}-surname`] : [id];
+        const person = { result: generateSet(library, generator.id, { tableIds }) };
+        const row = el('div', 'wn-results wn-name-row');
+        const fields = el('div', paired ? 'wn-person' : 'wn-name-fields');
+        fields.id = `${generator.id}-result-${people.length + 1}`;
+        const copyRow = action('', 'copy', 'button subtle wn-name-copy');
+        copyRow.title = paired ? 'Kopiuj imię i nazwisko' : 'Kopiuj wynik';
+        copyRow.setAttribute('aria-label', `Kopiuj wiersz ${people.length + 1} — ${generator.name_pl}`);
+        copyRow.addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(formatName(library, person.result));
+            notify('Wiersz skopiowany.');
+          } catch { notify('Schowek jest niedostępny. Zaznacz i skopiuj wynik.'); }
+        });
+        row.append(fields, copyRow);
+        const updateSaved = sessionResults.add(() => formatNameEntry(library, person.result), { groupKey: generator.id, title: generator.name_pl });
+        function refresh() {
+          renderSet(library, person.result, fields, (key, value) => {
+            try {
+              person.result = updateChoice(library, person.result, key, value);
+              updateSaved(() => formatNameEntry(library, person.result));
+              refresh();
+              status.textContent = 'Zmieniono wynik.';
+            } catch (error) { notify(error.message); }
+          });
+        }
+        people.push(person);
+        refresh();
+        output.append(row);
+        toolbar.hidden = false;
+        status.textContent = `Dodano: ${label}. Wyników: ${people.length}.`;
+      } catch (error) { notify(error.message); }
+    });
+    buttons.append(button);
+  }
+  card.append(buttons, status, output, toolbar);
+  return card;
+}
+
+function createCard(library, generator, getLevel) {
+  if (generator.category_id === 'names') return createNamesCard(library, generator);
   let result;
-  const nameResults = new Map();
-  const names = generator.category_id === 'names';
+  let updateSaved;
   const card = el('section', 'wn-card');
   card.setAttribute('aria-labelledby', `wn-${generator.id}-title`);
   const header = el('div', 'wn-card-header');
@@ -120,8 +191,7 @@ function createCard(library, generator) {
   heading.id = `wn-${generator.id}-title`;
   const roll = action(generator.name_pl, 'dice', 'button wn-roll');
   roll.setAttribute('aria-label', `Losuj — ${generator.name_pl}`);
-  if (names) heading.textContent = generator.name_pl;
-  else heading.append(roll);
+  heading.append(roll);
   header.append(heading);
   card.append(header);
   if (generator.instructions_pl) card.append(description(generator.instructions_pl));
@@ -133,51 +203,32 @@ function createCard(library, generator) {
   const copy = action('Kopiuj zestaw', 'copy', 'button subtle');
   copy.addEventListener('click', async () => {
     try {
-      await navigator.clipboard.writeText(formatGeneratorSet(library, result));
-      notify('Zestaw skopiowany.');
+      await navigator.clipboard.writeText(formatGeneratorSet(library, result, getLevel()));
+      notify('Zestaw skopiowany jako Markdown.');
     } catch { notify('Schowek jest niedostępny. Zaznacz i skopiuj wyniki.'); }
   });
   toolbar.append(copy);
   function refresh() {
     renderSet(library, result, output, (key, value) => {
       try {
-        if (names) {
-          const entry = [...nameResults].find(([, single]) => single.tree.children[0].key === key);
-          nameResults.set(entry[0], updateChoice(library, entry[1], key, value));
-          mergeNames();
-        } else result = updateChoice(library, result, key, value);
+        result = updateChoice(library, result, key, value);
+        const saved = result;
+        updateSaved(level => formatGeneratorSet(library, saved, level));
         refresh();
         status.textContent = 'Zmieniono wynik.';
       } catch (error) { notify(error.message); }
     });
     toolbar.hidden = false;
   }
-  function mergeNames() {
-    result = { generatorId: generator.id, tree: { kind: 'generator', generatorId: generator.id, children: generator.table_ids.flatMap(id => nameResults.get(id)?.tree.children || []) } };
-  }
-  if (names) {
-    const buttons = el('div', 'wn-name-actions');
-    for (const id of generator.table_ids) {
-      const button = action(library.tables.get(id).name_pl, 'dice', 'button');
-      button.setAttribute('aria-label', `Losuj — ${generator.name_pl}: ${library.tables.get(id).name_pl}`);
-      button.addEventListener('click', () => {
-        nameResults.set(id, generateSet(library, generator.id, { tableId: id }));
-        mergeNames();
-        refresh();
-        status.textContent = `Wylosowano: ${library.tables.get(id).name_pl}.`;
-      });
-      buttons.append(button);
-    }
-    card.append(buttons);
-  } else {
-    roll.addEventListener('click', () => {
-      try {
-        result = result ? rerollSet(library, result) : generateSet(library, generator.id);
-        refresh();
-        status.textContent = `Wylosowano: ${generator.name_pl}.`;
-      } catch (error) { notify(error.message); }
-    });
-  }
+  roll.addEventListener('click', () => {
+    try {
+      result = result ? rerollSet(library, result) : generateSet(library, generator.id);
+      const saved = result;
+      updateSaved = sessionResults.add(level => formatGeneratorSet(library, saved, level));
+      refresh();
+      status.textContent = `Wylosowano: ${generator.name_pl}.`;
+    } catch (error) { notify(error.message); }
+  });
   card.append(status, output, toolbar);
   return card;
 }
@@ -190,6 +241,24 @@ export async function initGenerators(container) {
   }
   const [data, tags] = await Promise.all([read('./data/WN_GENERATORS_PL.json?v=1'), read('./data/WN_TAGS_PL_v2.json')]);
   const library = createGeneratorLibrary(data, tags);
+  const exportBar = document.querySelector('#wn-export-controls');
+  const markdown = headingPicker('generators-markdown-level');
+  markdown.select.setAttribute('aria-label', 'Poziom nagłówków Markdown');
+  markdown.select.title = 'Poziom nagłówków Markdown';
+  const copyAll = action('Kopiuj wszystkie wyniki', 'copy', 'button');
+  const count = el('span', 'wn-session-count');
+  count.setAttribute('role', 'status');
+  sessionResults.subscribe(total => {
+    copyAll.disabled = total === 0;
+    count.textContent = `Wyniki w historii: ${total}`;
+  });
+  copyAll.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(sessionResults.format(markdown.select.value));
+      notify('Wszystkie wyniki skopiowane jako Markdown.');
+    } catch { notify('Schowek jest niedostępny. Spróbuj ponownie.'); }
+  });
+  exportBar.replaceChildren(count, markdown.select, copyAll);
   const categoryPicker = el('details', 'wn-category-picker');
   categoryPicker.open = true;
   const categorySummary = el('summary', '', `Kategorie: ${library.categories[0].name_pl}`);
@@ -207,7 +276,7 @@ export async function initGenerators(container) {
     panel.hidden = panels.length !== 0;
     const title = el('h2', 'wn-category-title', category.name_pl);
     panel.append(title);
-    for (const id of category.generator_ids) panel.append(createCard(library, library.generators.get(id)));
+    for (const id of category.generator_ids) panel.append(createCard(library, library.generators.get(id), () => markdown.select.value));
     button.addEventListener('click', () => {
       categorySummary.textContent = `Kategorie: ${category.name_pl}`;
       for (const item of panels) {

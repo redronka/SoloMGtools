@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { createGeneratorLibrary, generateSet, updateChoice, rerollSet, flattenNodes, rollTable, rowText, formatGeneratorSet } from '../generators.js';
+import { createGeneratorLibrary, generateSet, updateChoice, rerollSet, flattenNodes, rollTable, rowText, formatName, formatNameEntry, formatGeneratorSet } from '../generators.js';
 
 const data = JSON.parse(await readFile(new URL('../data/WN_GENERATORS_PL.json', import.meta.url), 'utf8'));
 const tags = JSON.parse(await readFile(new URL('../data/WN_TAGS_PL_v2.json', import.meta.url), 'utf8'));
@@ -46,7 +46,7 @@ test('Każdy generator wykonuje procedurę i zwraca wyłącznie wyniki z danych'
     const result = generateSet(library, generator.id, { rng });
     assert.ok(tables(result).length, generator.id);
     for (const node of tables(result)) assert.ok(library.tables.get(node.tableId).rows.some(row => row.id === node.rowId));
-    assert.ok(formatGeneratorSet(library, result).startsWith(generator.name_pl));
+    assert.ok(formatGeneratorSet(library, result).startsWith(`## ${generator.name_pl}`));
   }
 });
 
@@ -73,6 +73,48 @@ test('Imię, nazwisko i miejsce można losować niezależnie', () => {
     assert.deepEqual(tables(result).map(node => node.tableId), [id]);
     const changed = choose(result, id, 1);
     assert.equal(tables(changed)[0].rowId, library.tables.get(id).rows[1].id);
+    const labels = { male: 'Mężczyzna', female: 'Kobieta', surname: 'Nazwisko', place: 'Miejsce' };
+    assert.equal(formatNameEntry(library, changed), `${labels[id.split('-').at(-1)]}: ${formatName(library, changed)}`);
+  }
+});
+
+test('Każde imię męskie i żeńskie tworzy parę z nazwiskiem, edytowaną niezależnie', () => {
+  for (const generator of data.generators.filter(item => item.category_id === 'names')) {
+    for (const sex of ['male', 'female']) {
+      const ids = [`${generator.id}-${sex}`, `${generator.id}-surname`];
+      const result = generateSet(library, generator.id, { tableIds: ids, rng: () => 0 });
+      assert.deepEqual(tables(result).map(node => node.tableId), ids);
+      const changed = choose(result, ids[0], 1, () => { throw new Error('Nazwisko musi pozostać bez zmian.'); });
+      assert.deepEqual(tables(changed)[1], tables(result)[1]);
+      const surnameChanged = choose(changed, ids[1], 2);
+      assert.deepEqual(tables(surnameChanged)[0], tables(changed)[0]);
+      assert.deepEqual(tables(rerollSet(library, surnameChanged, () => 0.5)).map(node => node.tableId), ids);
+      const text = formatGeneratorSet(library, surnameChanged, 3);
+      assert.ok(text.startsWith(`### ${generator.name_pl}\n\n`));
+      const name = rowText(library.tables.get(ids[0]), library.tables.get(ids[0]).rows[1]);
+      const surname = rowText(library.tables.get(ids[1]), library.tables.get(ids[1]).rows[2]);
+      assert.equal(formatName(library, surnameChanged), `${name} ${surname}`);
+      assert.equal(formatNameEntry(library, surnameChanged), `${sex === 'male' ? 'Mężczyzna' : 'Kobieta'}: ${name} ${surname}`);
+      assert.equal(text, `### ${generator.name_pl}\n\n${name} ${surname}`);
+    }
+  }
+});
+
+test('Eksport Markdown respektuje poziom startowy i zagnieżdżenie misji z pośrednikiem', () => {
+  let result = generateSet(library, 'one-roll-mission', { rng: () => 0 });
+  const toggle = flattenNodes(result.tree).find(node => node.kind === 'toggle');
+  result = updateChoice(library, result, toggle.key, true, () => 0);
+  for (const level of [1, 2, 3, 4]) {
+    const text = formatGeneratorSet(library, result, level);
+    const headings = text.split('\n').filter(line => /^#+ /.test(line));
+    assert.ok(headings[0].startsWith(`${'#'.repeat(level)} `));
+    assert.ok(headings.some(line => line.startsWith(`${'#'.repeat(level + 1)} `)));
+    assert.ok(headings.some(line => line.startsWith(`${'#'.repeat(level + 2)} `)));
+    assert.ok(headings.every(line => /^#{1,6} /.test(line)));
+    for (const node of tables(result)) {
+      const table = library.tables.get(node.tableId);
+      assert.ok(text.includes(rowText(table, table.rows.find(row => row.id === node.rowId))));
+    }
   }
 });
 

@@ -4,6 +4,19 @@ import { decodeProfile, extractMapData, formatProfile, getLevelMetric, getPrevie
 import { LEVEL_GUIDES } from '../uwp-levels.js';
 import { LAWS } from '../uwp-data.js';
 
+test('Markdown profilu: poziomy 1–4, zagnieżdżone cechy i brak pustych rozszerzeń', () => {
+  const result = decodeProfile({ uwp: EXAMPLE.uwp });
+  assert.ok(formatProfile(result).startsWith('## Profil Świata\n\n'));
+  for (const level of [1, 2, 3, 4]) {
+    const text = formatProfile(result, level);
+    assert.ok(text.startsWith(`${'#'.repeat(level)} Profil Świata\n\n`));
+    assert.ok(text.includes(`${'#'.repeat(level + 1)} ${result.sections[0].title}: ${EXAMPLE.uwp}`));
+    assert.ok(text.includes(`${'#'.repeat(level + 2)} ${result.sections[0].items[0].label}`));
+    assert.ok(!/^#+ (Znaczenie|Ekonomia|Kultura)/m.test(text));
+    assert.ok(!/^#{7,} /m.test(text));
+  }
+});
+
 test('Przykład z mapy: 8 cech UWP, Ix oraz po 4 cechy Ex i Cx', () => {
   const extracted = extractMapData(EXAMPLE_PASTE);
   assert.deepEqual(extracted.errors, []);
