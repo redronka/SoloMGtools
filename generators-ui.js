@@ -1,4 +1,4 @@
-import { createGeneratorLibrary, generateSet, updateChoice, rerollSet, rowText, rowDescription, plainText, formatName, formatNameEntry, formatGeneratorSet } from './generators.js?v=7';
+import { createGeneratorLibrary, generateSet, updateChoice, rerollSet, rowText, rowDescription, plainText, formatName, formatNameEntry, formatGeneratorSet } from './generators.js?v=9';
 import { el, action, notify, headingPicker } from './ui.js?v=4';
 import { sessionResults } from './session-results.js';
 

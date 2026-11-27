@@ -2,7 +2,7 @@ import { FIELD_LABELS, FIELDS, pickPair, generateResult, validateData } from './
 import { icon, el, action, notify } from './ui.js?v=4';
 import { initPlanets } from './planet-ui.js?v=5';
 import { initUwp } from './uwp-ui.js?v=4';
-import { initGenerators } from './generators-ui.js?v=8';
+import { initGenerators } from './generators-ui.js?v=10';
 import { heading } from './markdown.js';
 import { sessionResults } from './session-results.js';
 

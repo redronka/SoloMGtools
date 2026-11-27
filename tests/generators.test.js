@@ -23,7 +23,7 @@ test('Kompletna biblioteka: 15 grup, 50 generatorów, 253 tabele, 3761 wierszy i
   assert.equal(data.tables.length, 253);
   assert.equal(data.tables.reduce((sum, table) => sum + table.rows.length, 0), 3761);
   assert.equal(data.records.length, 142);
-  assert.equal(library.categories.length, 13);
+  assert.equal(library.categories.length, 10);
   assert.ok(!library.categories.some(category => category.id === 'cyberpunk-missions'));
   const missions = library.categories.find(category => category.id === 'missions');
   assert.equal(missions.name_pl, 'Misje');
@@ -34,7 +34,19 @@ test('Kompletna biblioteka: 15 grup, 50 generatorów, 253 tabele, 3761 wierszy i
   assert.ok(!library.categories.some(category => category.id === 'one-roll-characters'));
   const people = library.categories.find(category => category.id === 'people');
   assert.equal(people.name_pl, 'Postacie');
-  assert.deepEqual(people.generator_ids, ['one-roll-npc', 'one-roll-patron', 'one-roll-fixer']);
+  assert.deepEqual(people.generator_ids, ['one-roll-npc', 'one-roll-patron', 'cyberpunk-npc', 'one-roll-fixer']);
+  assert.ok(!library.categories.some(category => ['cyberpunk-people', 'cyberpunk-setting', 'cyberpunk-world'].includes(category.id)));
+  const cities = library.categories.find(category => category.id === 'cities');
+  assert.equal(cities.name_pl, 'Miasta');
+  assert.deepEqual(cities.generator_ids, ['world-problems', 'city-creation', 'city-problems', 'district-building']);
+  assert.ok(!library.categories.some(category => ['one-roll-encounters', 'encounter-sites'].includes(category.id)));
+  const encounters = library.categories.find(category => category.id === 'encounters');
+  assert.equal(encounters.name_pl, 'Spotkania');
+  assert.deepEqual(encounters.generator_ids, [
+    'one-roll-urban-encounter', 'one-roll-wilderness-encounter',
+    'encounter-site-past', 'encounter-site-features', 'encounter-site-occupants',
+    'one-roll-occupant-details', 'one-roll-occupant-leadership', 'encounter-site-hazards',
+  ]);
   const navigationIds = library.categories.flatMap(category => category.generator_ids);
   assert.equal(navigationIds.length, 50);
   assert.equal(new Set(navigationIds).size, 50);

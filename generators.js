@@ -50,7 +50,9 @@ export function createGeneratorLibrary(data, tagsData) {
   index(data.categories, 'categories');
   const categoryGroups = [
     { id: 'missions', name_pl: 'Misje', source_ids: ['cyberpunk-missions', 'missions'] },
-    { id: 'people', name_pl: 'Postacie', source_ids: ['one-roll-characters', 'people'] },
+    { id: 'people', name_pl: 'Postacie', source_ids: ['one-roll-characters', 'cyberpunk-people', 'people'] },
+    { id: 'cities', name_pl: 'Miasta', source_ids: ['cyberpunk-setting', 'cyberpunk-world'] },
+    { id: 'encounters', name_pl: 'Spotkania', source_ids: ['one-roll-encounters', 'encounter-sites'] },
   ];
   for (const category of data.categories) {
     const group = categoryGroups.find(item => item.source_ids.includes(category.id));

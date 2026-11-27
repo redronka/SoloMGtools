@@ -1,12 +1,14 @@
 # SoloMGtools
 
-Polski warsztat narzędzi dla Mistrza Gry i do gry solo. Menu **Generatory** pozwala przełączać się między **Tagami** (osiem kategorii i 490 tagów WN-TAGS), **Nazwami planet** (31 typów i 1470 autorskich nazw inspirowanych Travellerem), **Dekoderem UWP** oraz **Generators** (50 generatorów WN-Generators w 13 grupach). Wyniki narzędzi pozostają zachowane podczas przełączania, do odświeżenia strony.
+Polski warsztat narzędzi dla Mistrza Gry i do gry solo. Menu **Generatory** pozwala przełączać się między **Tagami** (osiem kategorii i 490 tagów WN-TAGS), **Nazwami planet** (31 typów i 1470 autorskich nazw inspirowanych Travellerem), **Dekoderem UWP** oraz **Generators** (50 generatorów WN-Generators w 10 grupach). Wyniki narzędzi pozostają zachowane podczas przełączania, do odświeżenia strony.
 
 ## Generators
 
 - Otwórz **Generators** lub `#wn-generators`, wybierz grupę i kliknij nazwę generatora. Pierwsze losowanie następuje dopiero po kliknięciu.
 - Nagłówek **Kategorie** zwija i rozwija listę kategorii, zachowując widoczne wyniki. W zwiniętym nagłówku widać nazwę wybranej kategorii. **Misje** łączą wszystkie 11 generatorów z dwóch źródłowych grup misji.
-- **Postacie** łączą BN jednym rzutem, patronów i pośrednika z dotychczasowych grup „Postacie jednym rzutem” i „Postacie”.
+- **Postacie** łączą BN jednym rzutem, patronów, postacie cyberpunkowe i pośrednika z dotychczasowych grup „Postacie jednym rzutem”, „Postacie cyberpunkowe” i „Postacie”.
+- **Miasta** łączą generatory z dotychczasowych grup „Świat i miasto cyberpunkowe” oraz „Miasto i dzielnice”.
+- **Spotkania** łączą osiem generatorów z dotychczasowych grup „Spotkania jednym rzutem” i „Miejsca spotkań”.
 - BN jednym rzutem, megakorporacja, gang i szczegółowe typy misji losują wszystkie składniki zestawu jednocześnie. Przyciski **Imię męskie + nazwisko** i **Imię żeńskie + nazwisko** dopisują kolejne osoby. Imię i nazwisko są obok siebie, każde z własną listą wyboru. Nazwiska oraz nazwy miejsc można też losować osobno.
 - Ikona kopiowania na końcu wiersza kopiuje wyłącznie aktualne `Imię Nazwisko` (lub samodzielnie wylosowaną nazwę). **Kopiuj zestaw** w karcie imion kopiuje wszystkie jej wiersze, po jednej osobie lub nazwie w linii, z etykietami **Mężczyzna**, **Kobieta**, **Nazwisko** i **Miejsce**. Górny przycisk **Kopiuj wszystkie wyniki** używa tych samych etykiet i scala wpisy danej grupy pod jednym nagłówkiem, np. „Imiona i nazwy arabskie”.
 - Każdy wynik otwiera listę wszystkich pozycji z właściwej tabeli. Zmiana pola zachowuje niezależne wyniki; zmiana typu misji lub kategorii miejsca przebudowuje powiązaną gałąź.
