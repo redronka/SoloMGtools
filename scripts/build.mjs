@@ -11,7 +11,7 @@ createGeneratorLibrary(JSON.parse(await readFile(new URL('data/WN_GENERATORS_PL.
 await rm(out, { recursive: true, force: true });
 await mkdir(out, { recursive: true });
 await mkdir(new URL('data/', out));
-for (const file of ['index.html', 'styles.css', 'app.js', 'generator.js', 'ui.js', 'markdown.js', 'session-results.js', 'planets.js', 'planet-ui.js', 'uwp.js', 'uwp-data.js', 'uwp-levels.js', 'uwp-ui.js', 'generators.js', 'generators-ui.js', 'favicon.svg', 'data/WN_TAGS_PL_v2.json', 'data/PLANET_NAMES_PL.json', 'data/WN_GENERATORS_PL.json', 'data/WN_GENERATORS_PL.schema.json']) {
+for (const file of ['index.html', 'styles.css', 'app.js', 'generator.js', 'ui.js', 'markdown.js', 'session-results.js', 'planets.js', 'planet-ui.js', 'uwp.js', 'uwp-data.js', 'uwp-levels.js', 'uwp-ui.js', 'uwp-map.js', 'uwp-api.js', 'uwp-summary-ui.js', 'uwp-share.js', 'generators.js', 'generators-ui.js', 'favicon.svg', 'data/WN_TAGS_PL_v2.json', 'data/PLANET_NAMES_PL.json', 'data/WN_GENERATORS_PL.json', 'data/WN_GENERATORS_PL.schema.json']) {
   await cp(new URL(file, root), new URL(file, out), { recursive: true });
 }
 console.log(`Gotowa strona: ${fileURLToPath(out)}`);

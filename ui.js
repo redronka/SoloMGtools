@@ -1,4 +1,5 @@
 const icons = {
+  summary: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 12h8M8 17h5"/>',
   world: '<circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/>',
   mission: '<path d="m14 3 7 7-11 11H3v-7L14 3Z"/><path d="m13 4 7 7M6 15l3 3"/>',
   enclave: '<path d="m3 10 9-7 9 7v11H3V10Z"/><path d="M9 21v-8h6v8"/>',

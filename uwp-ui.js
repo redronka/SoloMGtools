@@ -1,6 +1,10 @@
 import { el, action, notify, headingPicker } from './ui.js?v=4';
 import { sessionResults } from './session-results.js';
-import { decodeProfile, extractMapData, formatProfile, getPreviewValues, getPreviewValue, previewMetric, EXAMPLE, EXAMPLE_PASTE } from './uwp.js?v=4';
+import { decodeProfile, extractMapData, formatProfile, getPreviewValues, getPreviewValue, previewMetric } from './uwp.js?v=8';
+import { FULL_EXAMPLE_PASTE, extractAdditionalData } from './uwp-map.js?v=4';
+import { renderAdditional, renderSummary, createSummaryButton } from './uwp-summary-ui.js?v=5';
+import { readProfileLink } from './uwp-share.js';
+import { locationQuery, fetchWorldProfile } from './uwp-api.js';
 
 function codeLabel(item) {
   return item.code + (item.value !== null && item.code !== String(item.value) ? ` = ${item.value}` : '');
@@ -27,14 +31,17 @@ function renderMetricBody(body, view) {
   if (view.extra && (!view.interpretation || view.guideKey === 'technology')) body.append(el('p', 'uwp-extra', view.extra));
 }
 
-function createMetricCard(item) {
+function createMetricCard(item, hasSummary) {
   const values = getPreviewValues(item);
   const card = el('article', `uwp-card${values.length ? ' uwp-level-card' : ''}`);
   if (item.guideKey) card.dataset.guide = item.guideKey;
   if (item.previewKey) card.dataset.parameter = item.previewKey;
   const top = el('div', 'uwp-card-top');
   const code = el('span', 'uwp-code', codeLabel(item));
-  top.append(el('h4', '', item.label), code);
+  const actions = el('div', 'uwp-card-actions');
+  actions.append(code);
+  if (hasSummary) actions.append(createSummaryButton());
+  top.append(el('h4', '', item.label), actions);
   card.append(top);
   if (item.guideKey) {
     const explanation = el('details', 'uwp-explanation');
@@ -89,18 +96,40 @@ export function initUwp(container) {
   const title = el('h2', '', 'Odczytaj świat z kodu');
   title.id = 'uwp-editor-title';
   editorSummary.append(title);
-  intro.append(el('p', 'uwp-muted', 'Wpisz UWP ręcznie lub wklej dane z Traveller Map. Rozszerzenia są opcjonalne — możesz je też odczytać osobno.'));
+  intro.append(el('p', 'uwp-muted', 'Pobierz świat po sektorze i heksie albo wklej pełny opis, także własny lub zmieniony przez MG. Możesz również wpisać same kody ręcznie.'));
+  const lookupForm = el('form', 'uwp-lookup');
+  lookupForm.noValidate = true;
+  lookupForm.append(el('h3', '', '1. Pobierz świat z Traveller Map'));
+  const locationLabel = el('label', 'uwp-label', 'Sektor i heks');
+  locationLabel.htmlFor = 'uwp-location';
+  const locationInput = el('input', 'uwp-location-input');
+  locationInput.id = locationLabel.htmlFor;
+  locationInput.type = 'text';
+  locationInput.placeholder = 'Spinward Marches 1920';
+  locationInput.autocomplete = 'off';
+  locationInput.spellcheck = false;
+  const lookupButton = action('Pobierz i dekoduj', 'world', 'button primary');
+  lookupButton.type = 'submit';
+  const lookupControls = el('div', 'uwp-lookup-controls');
+  lookupControls.append(locationInput, lookupButton);
+  const locationHint = el('p', 'uwp-muted', 'Wystarczy nazwa sektora i czterocyfrowy heks. Pobrany pełny opis pojawi się poniżej — możesz go zmienić i wczytać ponownie.');
+  locationHint.id = 'uwp-location-hint';
+  locationInput.setAttribute('aria-describedby', locationHint.id);
+  const lookupStatus = el('p', 'uwp-muted');
+  lookupStatus.setAttribute('role', 'status');
+  lookupForm.append(locationLabel, lookupControls, locationHint, lookupStatus);
   const importBox = el('details', 'uwp-import');
-  const importTitle = el('summary', '', 'Wklej dane z Traveller Map');
+  const importTitle = el('summary', '', '2. Wklej pełne dane lub własny świat');
   const pasteLabel = el('label', 'uwp-label', 'Dane jednego świata');
   pasteLabel.htmlFor = 'uwp-paste';
   const paste = el('textarea');
   paste.id = 'uwp-paste';
   paste.rows = 5;
-  paste.placeholder = EXAMPLE_PASTE;
+  paste.maxLength = 60000;
+  paste.placeholder = FULL_EXAMPLE_PASTE;
   paste.spellcheck = false;
   const importButton = action('Wczytaj i dekoduj', 'refresh');
-  const pasteHint = el('p', 'uwp-muted', 'Wklej sam kod, cztery wiersze z etykietami albo pełny wiersz danych sektora. Wczytanie zastąpi wszystkie pola poniżej.');
+  const pasteHint = el('p', 'uwp-muted', 'Pełny opis jest odczytywany lokalnie i zachowuje zmiany MG. Możesz wkleić także samo „Spinward Marches 1920”, aby pobrać dane z mapy. Lokalizacja jest potrzebna tylko do podsumowania i mapki.');
   pasteHint.id = 'uwp-paste-hint';
   paste.setAttribute('aria-describedby', pasteHint.id);
   importBox.append(importTitle, pasteLabel, paste, pasteHint, importButton);
@@ -137,7 +166,7 @@ export function initUwp(container) {
   const toolbar = el('div', 'uwp-actions');
   const decode = action('Dekoduj profil', 'world', 'button primary');
   decode.type = 'submit';
-  const example = action('Wczytaj przykład', 'refresh', 'button subtle');
+  const example = action('Wczytaj pełny przykład', 'refresh', 'button subtle');
   const clear = action('Wyczyść', 'refresh', 'button subtle');
   toolbar.append(decode, example, clear);
   const errors = el('div', 'uwp-errors');
@@ -147,7 +176,7 @@ export function initUwp(container) {
   const status = el('p', 'sr-only');
   status.setAttribute('role', 'status');
   form.append(grid, errors, toolbar);
-  editor.append(editorSummary, intro, importBox, form);
+  editor.append(editorSummary, intro, lookupForm, importBox, form);
 
   const results = el('div', 'uwp-results');
   const resultBar = el('div', 'uwp-result-bar');
@@ -178,30 +207,58 @@ export function initUwp(container) {
     references.append(link);
   }
   results.append(resultBar, output);
-  container.append(editor, status, results, notes, references);
+  const summaryOutput = el('div');
+  const backToTop = el('button', 'button subtle uwp-back-top', 'Wróć na górę');
+  backToTop.type = 'button';
+  backToTop.hidden = true;
+  backToTop.addEventListener('click', () => {
+    const top = document.querySelector('.topbar');
+    if (top) { top.tabIndex = -1; top.focus({ preventScroll: true }); }
+    window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+  });
+  container.append(editor, status, results, notes, references, summaryOutput, backToTop);
   let current;
+  let importedAdditional = null;
+  let mediaController;
+  let lookupController;
+  let lookupRevision = 0;
+
+  function cancelLookup() {
+    lookupRevision++;
+    lookupController?.abort();
+    lookupController = null;
+    lookupButton.disabled = false;
+    lookupForm.removeAttribute('aria-busy');
+    lookupStatus.textContent = '';
+  }
+  function useLocation(additional) {
+    locationInput.value = additional?.location ? `${additional.location.sector} ${additional.location.hex}` : '';
+  }
 
   function resetErrors() {
     errors.replaceChildren();
     errors.hidden = true;
-    for (const input of [...Object.values(fields), paste]) {
+    for (const input of [...Object.values(fields), paste, locationInput]) {
       input.removeAttribute('aria-invalid');
       const described = input.getAttribute('aria-describedby')?.replace(/\s*uwp-errors/g, '');
       if (described) input.setAttribute('aria-describedby', described);
     }
   }
   function emptyOutput(message = 'Wpisz kody powyżej, aby zobaczyć ich znaczenie.') {
+    mediaController?.abort();
     current = null;
     copy.disabled = true;
+    backToTop.hidden = true;
+    summaryOutput.replaceChildren();
     output.replaceChildren(el('p', 'uwp-empty', message));
   }
-  function showErrors(items, fromPaste = false) {
+  function showErrors(items, fromPaste = false, fromLocation = false) {
     editor.open = true;
     if (fromPaste) importBox.open = true;
     resetErrors();
     const list = el('ul');
     for (const item of items) {
-      const input = fromPaste ? paste : fields[item.field];
+      const input = fromLocation ? locationInput : fromPaste ? paste : fields[item.field];
       input.setAttribute('aria-invalid', 'true');
       if (!input.getAttribute('aria-describedby').includes('uwp-errors')) input.setAttribute('aria-describedby', `${input.getAttribute('aria-describedby')} uwp-errors`);
       const li = el('li');
@@ -215,57 +272,142 @@ export function initUwp(container) {
     errors.append(list);
     errors.hidden = false;
     emptyOutput('Popraw wskazane dane i ponownie uruchom dekoder.');
-    (fromPaste ? paste : fields[items[0].field]).focus();
+    (fromLocation ? locationInput : fromPaste ? paste : fields[items[0].field]).focus();
   }
   function render(result) {
     resetErrors();
     current = result;
-    sessionResults.add(level => formatProfile(result, level));
+    const shareBaseUrl = location.href;
+    sessionResults.add(level => formatProfile(result, level, shareBaseUrl));
     copy.disabled = false;
     output.replaceChildren();
+    summaryOutput.replaceChildren();
+    mediaController?.abort();
+    mediaController = new AbortController();
+    const targets = new Map();
     if (result.warnings.length) {
       const warning = el('div', 'uwp-warning');
       for (const text of result.warnings) warning.append(el('p', '', text));
       output.append(warning);
     }
-    for (const section of result.sections) {
+    for (const [sectionIndex, section] of result.sections.entries()) {
       const block = el('section', 'uwp-section');
+      block.id = `uwp-section-${sectionIndex}`;
+      targets.set(`section-${sectionIndex}`, block);
       const header = el('div', 'uwp-section-header');
       header.append(el('h3', '', section.title), el('code', 'uwp-profile-code', section.code));
+      if (result.summary) header.append(createSummaryButton({ showLabel: sectionIndex === 0 }));
       const cards = el('div', 'uwp-grid');
-      for (const item of section.items) cards.append(createMetricCard(item));
+      for (const [itemIndex, item] of section.items.entries()) {
+        const card = createMetricCard(item, Boolean(result.summary));
+        card.id = `uwp-metric-${sectionIndex}-${itemIndex}`;
+        targets.set(`metric-${sectionIndex}-${itemIndex}`, card);
+        if (item.previewKey) targets.set(item.previewKey, card);
+        cards.append(card);
+      }
       block.append(header, cards);
       output.append(block);
     }
+    const additional = renderAdditional(result, targets);
+    if (additional) output.append(additional);
+    if (result.summary) summaryOutput.append(renderSummary(result, targets, mediaController.signal));
+    backToTop.hidden = false;
     status.textContent = `Odczytano: ${result.sections.map(section => `${section.title} ${section.code}`).join(', ')}.`;
     editor.open = false;
     resultTitle.tabIndex = -1;
     resultTitle.focus({ preventScroll: true });
-    results.scrollIntoView({ block: 'start', behavior: 'instant' });
+    container.scrollIntoView({ block: 'start', behavior: 'instant' });
   }
   function readFields() { return Object.fromEntries(Object.entries(fields).map(([key, input]) => [key, input.value])); }
   function useFields(values) { for (const [key, input] of Object.entries(fields)) input.value = values[key] || ''; }
   function run() {
-    const result = decodeProfile(readFields());
+    cancelLookup();
+    const result = decodeProfile(readFields(), importedAdditional);
     if (result.errors.length) { showErrors(result.errors); return; }
     useFields(result.fields);
+    clearSharedHash();
     render(result);
   }
   form.addEventListener('submit', event => { event.preventDefault(); run(); });
   for (const input of Object.values(fields)) input.addEventListener('input', () => {
+    cancelLookup();
+    clearSharedHash();
+    // Nowy UWP nie może odziedziczyć lokalizacji ani szczegółów poprzedniego świata.
+    if (input === fields.uwp) importedAdditional = null;
     resetErrors();
     emptyOutput('Dane zmienione. Kliknij „Dekoduj profil”, aby odświeżyć opis.');
   });
-  importButton.addEventListener('click', () => {
+  function importPaste() {
+    if (locationQuery(paste.value)) return loadLocation(paste.value, true);
+    cancelLookup();
+    importedAdditional = null;
     const extracted = extractMapData(paste.value);
     if (extracted.errors.length) { showErrors(extracted.errors, true); return; }
-    const result = decodeProfile(extracted.fields);
+    const result = decodeProfile(extracted.fields, extracted.additional);
     if (result.errors.length) { showErrors(result.errors, true); return; }
+    importedAdditional = extracted.additional;
+    useLocation(importedAdditional);
     useFields(result.fields);
+    clearSharedHash();
     render(result);
+    return true;
+  }
+  importButton.addEventListener('click', importPaste);
+  lookupForm.addEventListener('submit', event => { event.preventDefault(); loadLocation(locationInput.value); });
+  locationInput.addEventListener('input', () => { cancelLookup(); resetErrors(); });
+  paste.addEventListener('input', () => {
+    cancelLookup();
+    importedAdditional = null;
+    clearSharedHash();
+    resetErrors();
+    emptyOutput('Dane zmienione. Kliknij „Wczytaj i dekoduj”, aby odświeżyć opis.');
   });
-  example.addEventListener('click', () => { useFields(EXAMPLE); run(); });
+  async function loadLocation(value, fromPaste = false) {
+    cancelLookup();
+    resetErrors();
+    const query = locationQuery(value);
+    if (!query) {
+      showErrors([{ field: 'uwp', message: 'Podaj nazwę sektora i czterocyfrowy heks, np. Spinward Marches 1920 (kolumny 01–32, wiersze 01–40).' }], fromPaste, !fromPaste);
+      return;
+    }
+    const revision = lookupRevision;
+    const controller = new AbortController();
+    lookupController = controller;
+    lookupButton.disabled = true;
+    lookupForm.setAttribute('aria-busy', 'true');
+    lookupStatus.textContent = `Pobieranie danych: ${query.sector} ${query.hex}…`;
+    emptyOutput('Pobieranie pełnego opisu świata z Traveller Map…');
+    try {
+      const { source, result } = await fetchWorldProfile(query, { signal: controller.signal });
+      if (controller.signal.aborted || revision !== lookupRevision) return;
+      paste.value = source;
+      importedAdditional = result.additional;
+      useLocation(importedAdditional);
+      useFields(result.fields);
+      clearSharedHash();
+      render(result);
+      notify('Pobrano pełny opis świata. Możesz zmienić dane w opcji 2 i wczytać je ponownie.');
+    } catch (error) {
+      if (controller.signal.aborted || revision !== lookupRevision) return;
+      showErrors([{ field: 'uwp', message: error.message }], fromPaste, !fromPaste);
+    } finally {
+      if (revision === lookupRevision) {
+        lookupController = null;
+        lookupButton.disabled = false;
+        lookupForm.removeAttribute('aria-busy');
+        lookupStatus.textContent = '';
+      }
+    }
+  }
+  example.addEventListener('click', () => {
+    paste.value = FULL_EXAMPLE_PASTE;
+    if (importPaste()) notify('Wczytano pełny przykład Spinward Marches 1920: profil, dane dodatkowe i podsumowanie.');
+  });
   clear.addEventListener('click', () => {
+    cancelLookup();
+    clearSharedHash();
+    importedAdditional = null;
+    locationInput.value = '';
     useFields({});
     paste.value = '';
     resetErrors();
@@ -275,8 +417,28 @@ export function initUwp(container) {
   });
   copy.addEventListener('click', async () => {
     if (!current) return;
-    try { await navigator.clipboard.writeText(formatProfile(current, markdown.select.value)); notify('Opis świata skopiowany jako Markdown.'); }
+    try { await navigator.clipboard.writeText(formatProfile(current, markdown.select.value, location.href)); notify('Opis świata z linkiem skopiowany jako Markdown.'); }
     catch { notify('Schowek jest niedostępny. Zaznacz i skopiuj opis.'); }
   });
+  function clearSharedHash() {
+    if (location.hash.startsWith('#uwp?')) history.replaceState(null, '', `${location.pathname}${location.search}#uwp`);
+  }
+  function restoreLink() {
+    let state;
+    try { state = readProfileLink(location.hash); }
+    catch (error) { showErrors([{ field: 'uwp', message: error.message }], true); return; }
+    if (!state) return;
+    cancelLookup();
+    const additional = state.text ? extractAdditionalData(state.text) : null;
+    const result = decodeProfile(state.fields, additional);
+    if (result.errors.length) { showErrors(result.errors); return; }
+    paste.value = state.text;
+    importedAdditional = additional;
+    useLocation(additional);
+    useFields(result.fields);
+    render(result);
+  }
   emptyOutput();
+  window.addEventListener('hashchange', restoreLink);
+  restoreLink();
 }

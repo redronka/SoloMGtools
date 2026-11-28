@@ -1,6 +1,8 @@
 import { PORTS, ATMOSPHERES, GOVERNMENTS, LAWS, TECH_EXAMPLES } from './uwp-data.js?v=1';
 import { LEVEL_GUIDES } from './uwp-levels.js?v=1';
 import { heading, startLevel } from './markdown.js';
+import { extractAdditionalData, mapImageUrl, genericPlanetUrl, escapeMarkdown } from './uwp-map.js?v=4';
+import { createProfileLink } from './uwp-share.js';
 
 export const EHEX = '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ';
 export const EXAMPLE = { uwp: 'A593943-A', importance: '{ 4 }', economics: '(D8E+1)', culture: '[6D27]' };
@@ -99,7 +101,7 @@ export function extractMapData(input) {
     result[field] = matches[0] || '';
   }
   if (!FIELDS.some(field => result[field])) errors.push(invalid('uwp', 'nie znaleziono kodów. Wklej UWP lub dane świata z Traveller Map.'));
-  return { fields: result, errors };
+  return { fields: result, errors, additional: extractAdditionalData(input) };
 }
 
 const UWP_PREVIEW_CODES = {
@@ -187,7 +189,7 @@ function decodeCulture(parsed) {
   return { title: 'Kultura', code: parsed.code, items };
 }
 
-export function decodeProfile(fields) {
+export function decodeProfile(fields, additional = null) {
   const errors = [], parsed = {}, canonical = {}, sections = [], warnings = [];
   const parsers = { uwp: parseUwp, importance: parseImportance, economics: parseEconomics, culture: parseCulture };
   for (const field of FIELDS) {
@@ -212,10 +214,39 @@ export function decodeProfile(fields) {
     if (pop === 0 && parsed.culture.values.some(value => value !== 0)) warnings.push('Populacja UWP ma kod 0, ale Cx jest niezerowe. Sprawdź, czy rozszerzenie dotyczy tego samego świata.');
     if (pop !== null && pop > 0 && parsed.culture.values.every(value => value === 0)) warnings.push('Świat jest zamieszkany według UWP, ale [0000] zwykle oznacza świat bez ludności.');
   }
-  return { errors, sections, warnings, fields: canonical };
+  const summary = additional?.location ? {
+    location: { ...additional.location }, mapImage: mapImageUrl(additional.location),
+    planetImage: genericPlanetUrl(canonical.uwp), planetIsGeneric: true,
+  } : null;
+  return { errors, sections, warnings, fields: canonical, additional, summary };
 }
 
-export function formatProfile(result, level = 2) {
+function formatAdditional(result, level) {
+  if (!result.additional) return [];
+  const { items, remarks, rawRemarks } = result.additional;
+  if (!items.length && !remarks.length && !rawRemarks) return [];
+  return [heading(level, 'Dane dodatkowe'), ...items.map(item => `**${item.label}:** ${escapeMarkdown(item.value)}`),
+    ...remarks.map(item => `**${item.code} — ${item.title}:** ${item.description}`),
+    ...(!remarks.length && rawRemarks ? [`**Uwagi źródłowe:** ${escapeMarkdown(rawRemarks)}`] : [])];
+}
+
+function formatSummary(result, level) {
+  if (!result.summary) return [];
+  const { location, planetImage, planetIsGeneric, mapImage } = result.summary;
+  const place = [location.sector, location.hex].join(' ');
+  return [heading(level, 'Podsumowanie świata'),
+    ...[location.name, `${location.subsector ? `Podsektor ${location.subsector} · ` : ''}${place}`].filter(Boolean).map(escapeMarkdown),
+    ...result.sections.map(section => `**${section.title}: ${section.code}**\n\n${section.items.map(item => `- ${item.label}: ${item.title} (${item.code})`).join('\n')}`),
+    ...(result.additional?.items || []).map(item => `**${item.label}:** ${escapeMarkdown(item.value)}`),
+    ...(result.additional?.remarks?.length ? [`**Oznaczenia świata:** ${result.additional.remarks.map(item => `${item.code} — ${item.title}`).join('; ')}`] : []),
+    ...(planetImage ? [`![${planetIsGeneric ? 'Poglądowy obraz świata według UWP' : 'Obraz świata z Traveller Map'}](${planetImage})`,
+      planetIsGeneric ? 'Grafika poglądowa dobrana do UWP; nie jest dokładną mapą ani potwierdzonym wyglądem świata.' : 'Obraz świata: Traveller Map.'] : []),
+    heading(level + 1, 'Mapa okolicy — zasięg J-2'),
+    `![Mapa okolicy — ${escapeMarkdown(place)}](${mapImage})`,
+    'Mapa i obrazy: Traveller Map. Obrazy zewnętrzne wymagają połączenia z internetem.'];
+}
+
+export function formatProfile(result, level = 2, baseUrl = '') {
   level = startLevel(level);
   const sections = result.sections.map(section => `${heading(level + 1, `${section.title}: ${section.code}`)}\n\n${section.items.map(item => {
     const lines = [heading(level + 2, `${item.label}${item.originalName ? ` (${item.originalName})` : ''} [${item.code}${item.value !== null && item.code !== String(item.value) ? ` = ${item.value}` : ''}]: ${item.title}`), item.description];
@@ -224,5 +255,6 @@ export function formatProfile(result, level = 2) {
     if (item.extra) lines.push(item.extra);
     return lines.join('\n');
   }).join('\n\n')}`);
-  return [heading(level, 'Profil Świata'), ...sections, ...result.warnings.map(warning => `Uwaga: ${warning}`), heading(level + 1, 'Źródła i uwagi'), 'Podstawa: Traveller Map — Second Survey. Ceny paliwa i przykłady wyposażenia: Mongoose Traveller SRD. Opisy poziomów Ex/Cx i wskazówki do sesji są interpretacją MG; TL nie gwarantuje dostępności każdego urządzenia. Kopia zawiera wartości źródłowe, niezależnie od podglądu innych poziomów.', 'https://travellermap.com/doc/secondsurvey', 'https://www.traveller-srd.com/core-rules/spacecraft-operations/', 'https://www.traveller-srd.com/core-rules/equipment/'].join('\n\n');
+  const backlink = baseUrl ? [`[See in SoloMGtools](${createProfileLink(result, baseUrl)})`] : [];
+  return [...backlink, heading(level, 'Profil Świata'), ...sections, ...result.warnings.map(warning => `Uwaga: ${warning}`), ...formatAdditional(result, level + 1), heading(level + 1, 'Źródła i uwagi'), 'Podstawa: Traveller Map — Second Survey. Ceny paliwa i przykłady wyposażenia: Mongoose Traveller SRD. Opisy poziomów Ex/Cx i wskazówki do sesji są interpretacją MG; TL nie gwarantuje dostępności każdego urządzenia. Kopia zawiera wartości źródłowe, niezależnie od podglądu innych poziomów.', 'https://travellermap.com/doc/secondsurvey', 'https://www.traveller-srd.com/core-rules/spacecraft-operations/', 'https://www.traveller-srd.com/core-rules/equipment/', ...formatSummary(result, level + 1)].join('\n\n');
 }

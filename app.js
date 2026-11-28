@@ -1,7 +1,7 @@
 import { FIELD_LABELS, FIELDS, pickPair, generateResult, validateData } from './generator.js?v=2';
 import { icon, el, action, notify } from './ui.js?v=4';
 import { initPlanets } from './planet-ui.js?v=5';
-import { initUwp } from './uwp-ui.js?v=4';
+import { initUwp } from './uwp-ui.js?v=9';
 import { initGenerators } from './generators-ui.js?v=10';
 import { heading } from './markdown.js';
 import { sessionResults } from './session-results.js';
@@ -210,8 +210,9 @@ async function loadGenerator(generator) {
 }
 
 function selectGenerator() {
-  const generator = (location.hash === '#generators' && activeGenerator) ||
-    generators.find(item => `#${item.id}` === location.hash) || generators[0];
+  const route = location.hash.split('?')[0];
+  const generator = (route === '#generators' && activeGenerator) ||
+    generators.find(item => `#${item.id}` === route) || generators[0];
   const changed = activeGenerator && activeGenerator !== generator;
   activeGenerator = generator;
   for (const item of generators) {
